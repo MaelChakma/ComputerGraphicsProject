@@ -26,10 +26,14 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	// milliseconds, the following would have been used:
 	// auto const elapsed_time_ms = std::chrono::duration<float, std::milli>(elapsed_time).count();
 
+    glm::mat4 scalingMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 0.2, 0.2));
 	_body.spin.rotation_angle = -glm::half_pi<float>() / 2.0f;
-	glm::vec3 scaleFactors(1.0f, 0.2f, 0.20f); // example scale factors for x, y, z
-    glm::mat4 scalingMatrix = glm::scale(glm::mat4(1.0f), scaleFactors);
-	glm::mat4 world = parent_transform * scalingMatrix;
+
+	glm::mat4 rotationMatrixY = glm::rotate(glm::mat4 (parent_transform),_body.spin.rotation_angle , glm::vec3(0.0f,1.0f,0.0f));
+	glm::mat4 rotationMatrixZ = glm::rotate(glm::mat4 (parent_transform), _body.spin.rotation_angle, glm::vec3(0.0f,0.0f,1.0f));	
+	glm::mat4 Spin = parent_transform + rotationMatrixY + rotationMatrixZ;
+	glm::mat4 world = Spin * scalingMatrix; //world matrix transformed
+
 
 	if (show_basis)
 	{
@@ -72,12 +76,7 @@ void CelestialBody::set_scale(glm::vec3 const& scale)
 
 void CelestialBody::set_spin(SpinConfiguration const& configuration)
 {
-	glm::mat4 transform = glm::mat4(1.0f);
-	float angle = glm::radians(45.0f);
-	glm::vec3 axis(0.0f,1.0f,0.0f);
-	glm::mat4 roationMatrix = glm::rotate(transform, angle, axis );
 	_body.spin.axial_tilt = configuration.axial_tilt;
-	glm::mat4 world = world * rotationMatrix	
 	_body.spin.speed = configuration.speed;
 	_body.spin.rotation_angle = 0.0f;
 }
