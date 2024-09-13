@@ -18,23 +18,19 @@ CelestialBody::CelestialBody(bonobo::mesh_data const& shape,
 glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
                                 glm::mat4 const& view_projection,
                                 glm::mat4 const& parent_transform,
-                                bool show_basis)
+                                bool show_basis)						
 {
 	// Convert the duration from microseconds to seconds.
 	auto const elapsed_time_s = std::chrono::duration<float>(elapsed_time).count();
 	// If a different ratio was needed, for example a duration in
 	// milliseconds, the following would have been used:
-	// auto const elapsed_time_ms = std::chrono::duration<float, std::milli>(elapsed_time).count();
+	set_scale(glm::vec3(1.0f,1.0f,1.0f));
+    glm::mat4 scalingMatrix /*S*/ = glm::scale(glm::mat4(1.0f), _body.scale);
+	_body.spin.rotation_angle = elapsed_time_s/(-glm::half_pi<float>() / 2.0);
 
-    glm::mat4 scalingMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 0.2, 0.2));
-	_body.spin.rotation_angle = -glm::half_pi<float>() / 2.0f;
-
-	glm::mat4 rotationMatrixY = glm::rotate(glm::mat4 (parent_transform),_body.spin.rotation_angle , glm::vec3(0.0f,1.0f,0.0f));
-	glm::mat4 rotationMatrixZ = glm::rotate(glm::mat4 (parent_transform), _body.spin.rotation_angle, glm::vec3(0.0f,0.0f,1.0f));	
-	glm::mat4 Spin = parent_transform + rotationMatrixY + rotationMatrixZ;
-	glm::mat4 world = Spin * scalingMatrix; //world matrix transformed
-
-
+	glm::mat4 rotationMatrixY /*R1*/= glm::rotate(glm::mat4 (1.0f),_body.spin.rotation_angle , glm::vec3(0.0f,0.1f,0.0f));
+	glm::mat4 rotationMatrixZ /*R2*/= glm::rotate(glm::mat4 (1.0f), _body.spin.rotation_angle, glm::vec3(0.0f,0.0f,1.0f));	
+	glm::mat4 world = rotationMatrixZ * rotationMatrixY * scalingMatrix; //world matrix transformed
 	if (show_basis)
 	{
 		bonobo::renderBasis(1.0f, 2.0f, view_projection, world);
@@ -50,7 +46,6 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 
 	return parent_transform;
 }
-
 void CelestialBody::add_child(CelestialBody* child)
 {
 	_children.push_back(child);
