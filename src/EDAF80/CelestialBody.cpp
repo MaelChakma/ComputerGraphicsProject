@@ -23,7 +23,6 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	// Convert the duration from microseconds to seconds.
 	auto const elapsed_time_s = std::chrono::duration<float>(elapsed_time).count();
 
-	set_scale(glm::vec3(1.0f,1.0f,1.0f));
     glm::mat4 scalingMatrix /*S*/ = glm::scale(glm::mat4(1.0f), _body.scale);
 	
 	//world spining code
@@ -33,15 +32,16 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	glm::mat4 rotationMatrixZ /*R2*/= glm::rotate(glm::mat4 (1.0f),19.0f, glm::vec3(0.0f,0.0f,1.0f));	
 	
 	//translation and orbit code
-	_body.spin.rotation_angle = (-glm::half_pi<float>() / 2.0) * -elapsed_time_s;
-	_body.orbit.radius += _body.spin.rotation_angle; //updates the orbit angle to make it actually move
-	glm::mat4 translateMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 0.0f, 0.0f));
-	glm::mat4 orbitMatrixY = glm::rotate(glm::mat4 (1.0f), _body.orbit.radius, glm::vec3(0.0f,1.0f,0.0f));
-	glm::mat4 orbitMatrixZ = glm::rotate(glm::mat4(1.0f), 19.0f, glm::vec3(0.0f,0.0f,1.0f));
+	//_body.spin.rotation_angle = (-glm::half_pi<float>() / 2.0) * -elapsed_time_s;
 
-	glm::mat4 worldOrbit = orbitMatrixZ * orbitMatrixY* translateMatrix; //orbit matrix simplified
+	_body.orbit.rotation_angle += elapsed_time_s;
+	glm::mat4 translateMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(_body.orbit.radius, 0.0f, 0.0f));
+	glm::mat4 orbitMatrixY = glm::rotate(glm::mat4 (1.0f),_body.orbit.rotation_angle, glm::vec3(0.0f,1.0f,0.0f));
+	glm::mat4 orbitMatrixZ = glm::rotate(glm::mat4(1.0f), 19.0f, glm::vec3(0.0f,0.0f,1.0f)); //orbit matrix simplified
 
-	glm::mat4 world = worldOrbit * rotationMatrixZ * rotationMatrixY * scalingMatrix ; //world matrix transformed and orbiting 
+	glm::mat4 worldOrbit = parent_transform * orbitMatrixZ * orbitMatrixY * translateMatrix; 
+	
+	glm::mat4 world = worldOrbit * rotationMatrixZ * rotationMatrixY * scalingMatrix; //world matrix transformed and orbiting 
 	if (show_basis)
 	{
 		bonobo::renderBasis(1.0f, 2.0f, view_projection, world);
@@ -55,7 +55,7 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	// world matrix.
 	_body.node.render(view_projection, world);
 
-	return parent_transform;
+	return worldOrbit;
 }
 void CelestialBody::add_child(CelestialBody* child)
 {

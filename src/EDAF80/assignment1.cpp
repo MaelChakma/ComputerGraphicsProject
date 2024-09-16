@@ -164,10 +164,10 @@ int main()
 	moon.set_orbit({1.5f, glm::radians(-66.0f), glm::two_pi<float>() / 1.3f});
 
 	CelestialBody earth(sphere, &celestial_body_shader, earth_texture);
+	earth.set_scale(glm::vec3(1.0f,1.0f,1.0f));
 	earth.set_spin(earth_spin);
 	earth.set_orbit({-2.5f, glm::radians(45.0f), glm::two_pi<float>() / 10.0f});
 	earth.add_child(&moon);
-
 
 	//
 	// Define the colour and depth used for clearing.
@@ -249,8 +249,8 @@ int main()
 		// TODO: Replace this explicit rendering of the Earth and Moon
 		// with a traversal of the scene graph and rendering of all its
 		// nodes.
-		earth.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f)), show_basis);
-		//moon.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), glm::mat4(1.0f), show_basis);
+		glm::mat4 earthMatrix = earth.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f)), show_basis);
+		moon.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), earthMatrix, show_basis);
 
 
 		//
