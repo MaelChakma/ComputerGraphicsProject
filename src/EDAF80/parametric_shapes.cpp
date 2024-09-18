@@ -15,15 +15,15 @@ parametric_shapes::createQuad(float const width, float const height,
                               unsigned int const vertical_split_count)
 {
 	auto const vertices = std::array<glm::vec3, 4>{
-		glm::vec3(0.0f,  0.0f,   0.0f),
-		glm::vec3(width, 0.0f,   0.0f),
-		glm::vec3(width, height, 0.0f),
-		glm::vec3(0.0f,  height, 0.0f)
+		glm::vec3(0.0f,  0.0f,   0.0f), //Bottom left
+		glm::vec3(width, 0.0f,   0.0f), //Bottom right
+		glm::vec3(width, height, 0.0f), // Top rifht
+		glm::vec3(0.0f,  height, 0.0f) // Top left
 	};
 
 	auto const index_sets = std::array<glm::uvec3, 2>{
-		glm::uvec3(0u, 1u, 2u),
-		glm::uvec3(0u, 2u, 3u)
+		glm::uvec3(0u, 1u, 2u), //First triangle
+		glm::uvec3(0u, 2u, 3u) // Second triangle
 	};
 
 	bonobo::mesh_data data;
@@ -69,7 +69,7 @@ parametric_shapes::createQuad(float const width, float const height,
 	// and therefore bind the buffer to the corresponding target.
 	glBindBuffer(GL_ARRAY_BUFFER, data.bo);
 
-	glBufferData(GL_ARRAY_BUFFER, 12u,
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3),
 	             /* where is the data stored on the CPU? */vertices.data(),
 	             /* inform OpenGL that the data is modified once, but used often */GL_STATIC_DRAW);
 
@@ -93,10 +93,10 @@ parametric_shapes::createQuad(float const width, float const height,
 	// GL_ARRAY_BUFFER as its source for the data. How to interpret it is
 	// specified below:
 	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::vertices),
-	                      4,
+	                      3,
 	                      /* what is the type of each component? */GL_FLOAT,
 	                      /* should it automatically normalise the values stored */GL_FALSE,
-	                      /* once all components of a vertex have been read, how far away (in bytes) is the next vertex? */0,
+	                      /* once all components of a vertex have been read, how far away (in bytes) is the next vertex? */ sizeof(glm::vec3),
 	                      /* how far away (in bytes) from the start of the buffer is the first vertex? */reinterpret_cast<GLvoid const*>(0x0));
 
 	// Now, let's allocate a second one for the indices.
@@ -108,11 +108,11 @@ parametric_shapes::createQuad(float const width, float const height,
 	// elements, aka. indices!
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data.ibo);
 
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 12u,
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_sets.size() * sizeof(glm::uvec3),
 	             /* where is the data stored on the CPU? */index_sets.data(),
 	             /* inform OpenGL that the data is modified once, but used often */GL_STATIC_DRAW);
 
-	data.indices_nb = 4u;
+	data.indices_nb = index_sets.size() * 3u;
 
 	// All the data has been recorded, we can unbind them.
 	glBindVertexArray(0u);
@@ -121,7 +121,6 @@ parametric_shapes::createQuad(float const width, float const height,
 
 	return data;
 }
-
 bonobo::mesh_data
 parametric_shapes::createSphere(float const radius,
                                 unsigned int const longitude_split_count,
