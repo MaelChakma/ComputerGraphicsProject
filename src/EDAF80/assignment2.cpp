@@ -43,7 +43,7 @@ void
 edaf80::Assignment2::run()
 {
 	// Load the sphere geometry
-	auto const shape = parametric_shapes::createQuad(0.25f, 0.15f);
+	auto const shape = parametric_shapes::createSphere(0.15f, 10u, 10u)/*createQuad(0.25f, 0.15f)*/;
 	if (shape.vao == 0u)
 		return;
 
@@ -123,7 +123,7 @@ edaf80::Assignment2::run()
 
 	// Set whether to show the control points or not; it can always be changed
 	// at runtime through the "Scene Controls" window.
-	bool show_control_points = true;
+	//bool show_control_points = true;
 
 	auto circle_rings = Node();
 	circle_rings.set_geometry(shape);
