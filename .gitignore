@@ -22,3 +22,4 @@ log.txt
 *.sdf
 *.suo
 *.vcxproj.user
+.DS_Store
