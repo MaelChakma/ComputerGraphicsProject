@@ -123,7 +123,7 @@ edaf80::Assignment2::run()
 
 	// Set whether to show the control points or not; it can always be changed
 	// at runtime through the "Scene Controls" window.
-	//bool show_control_points = true;
+	bool show_control_points = true;
 
 	auto circle_rings = Node();
 	circle_rings.set_geometry(shape);
@@ -228,12 +228,12 @@ edaf80::Assignment2::run()
 			}
 		}
 
-		circle_rings.render(mCamera.GetWorldToClipMatrix());
-		if (show_control_points) {
-			for (auto const& control_point : control_points) {
-				control_point.render(mCamera.GetWorldToClipMatrix());
-			}
-		}
+		// circle_rings.render(mCamera.GetWorldToClipMatrix());
+		// if (show_control_points) {
+		// 	for (auto const& control_point : control_points) {
+		// 		control_point.render(mCamera.GetWorldToClipMatrix());
+		// 	}
+		// }
 
 		bool const opened = ImGui::Begin("Scene Controls", nullptr, ImGuiWindowFlags_None);
 		if (opened) {
