@@ -34,78 +34,21 @@ parametric_shapes::createQuad(float const width, float const height,
 		return data;
 	}
 
-	//
-	// NOTE:
-	//
-	// Only the values preceeded by a `\todo` tag should be changed, the
-	// other ones are correct!
-	//
-
-	// Create a Vertex Array Object: it will remember where we stored the
-	// data on the GPU, and  which part corresponds to the vertices, which
-	// one for the normals, etc.
-	//
-	// The following function will create new Vertex Arrays, and pass their
-	// name in the given array (second argument). Since we only need one,
-	// pass a pointer to `data.vao`.
 	glGenVertexArrays(1, &data.vao);
-
-	// To be able to store information, the Vertex Array has to be bound
-	// first.
 	glBindVertexArray(data.vao);
 
-	// To store the data, we need to allocate buffers on the GPU. Let's
-	// allocate a first one for the vertices.
-	//
-	// The following function's syntax is similar to `glGenVertexArray()`:
-	// it will create multiple OpenGL objects, in this case buffers, and
-	// return their names in an array. Have the buffer's name stored into
-	// `data.bo`.
 	glGenBuffers(1, &data.bo);
-
-	// Similar to the Vertex Array, we need to bind it first before storing
-	// anything in it. The data stored in it can be interpreted in
-	// different ways. Here, we will say that it is just a simple 1D-array
-	// and therefore bind the buffer to the corresponding target.
 	glBindBuffer(GL_ARRAY_BUFFER, data.bo);
-
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3),
-	             /* where is the data stored on the CPU? */vertices.data(),
-	             /* inform OpenGL that the data is modified once, but used often */GL_STATIC_DRAW);
-
-	// Vertices have been just stored into a buffer, but we still need to
-	// tell Vertex Array where to find them, and how to interpret the data
-	// within that buffer.
-	//
-	// You will see shaders in more detail in lab 3, but for now they are
-	// just pieces of code running on the GPU and responsible for moving
-	// all the vertices to clip space, and assigning a colour to each pixel
-	// covered by geometry.
-	// Those shaders have inputs, some of them are the data we just stored
-	// in a buffer object. We need to tell the Vertex Array which inputs
-	// are enabled, and this is done by the following line of code, which
-	// enables the input for vertices:
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3)),
 	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::vertices));
 
-	// Once an input is enabled, we need to explain where the data comes
-	// from, and how it interpret it. When calling the following function,
-	// the Vertex Array will automatically use the current buffer bound to
-	// GL_ARRAY_BUFFER as its source for the data. How to interpret it is
-	// specified below:
 	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::vertices),
 	                      3,
 	                      /* what is the type of each component? */GL_FLOAT,
 	                      /* should it automatically normalise the values stored */GL_FALSE,
 	                      /* once all components of a vertex have been read, how far away (in bytes) is the next vertex? */ sizeof(glm::vec3),
 	                      /* how far away (in bytes) from the start of the buffer is the first vertex? */reinterpret_cast<GLvoid const*>(0x0));
-
-	// Now, let's allocate a second one for the indices.
-	//
-	// Have the buffer's name stored into `data.ibo`.
 	glGenBuffers(1, &data.ibo);
-
-	// We still want a 1D-array, but this time it should be a 1D-array of
-	// elements, aka. indices!
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data.ibo);
 
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_sets.size() * sizeof(glm::uvec3),
@@ -136,9 +79,8 @@ parametric_shapes::createSphere(float const radius,
     std::vector<glm::vec3> binormals(vertex_count);
     std::vector<glm::vec2> texcoords(vertex_count);
 
-    // Step in angles
     float const d_theta = glm::pi<float>() / latitude_split_count;     // Step size in theta (polar angle)
-    float const d_phi = glm::two_pi<float>() / longitude_split_count;  // Step size in phi (azimuthal angle)
+    float const d_phi = glm::two_pi<float>() / longitude_split_count;  // Step size in phi
 
     // Generate vertices, normals, tangents, and texture coordinates
     for (unsigned int i = 0; i <= latitude_split_count; ++i) {
@@ -244,9 +186,137 @@ parametric_shapes::createTorus(float const major_radius,
                                unsigned int const major_split_count,
                                unsigned int const minor_split_count)
 {
-	//! \todo (Optional) Implement this function
-	return bonobo::mesh_data();
+    bonobo::mesh_data data;
+
+    // Number of vertices
+    unsigned int const vertex_count = (major_split_count + 1) * (minor_split_count + 1);
+    std::vector<glm::vec3> positions(vertex_count);
+    std::vector<glm::vec3> normals(vertex_count);
+    std::vector<glm::vec3> tangents(vertex_count);
+    std::vector<glm::vec3> binormals(vertex_count);
+    std::vector<glm::vec2> texcoords(vertex_count);
+
+    // Step in angles
+    float const d_major = glm::two_pi<float>() / major_split_count; // Step size in u (around the major axis)
+    float const d_minor = glm::two_pi<float>() / minor_split_count; // Step size in v (around the minor circle)
+
+    // Generate vertices, normals, tangents, and texture coordinates
+    for (unsigned int i = 0; i <= major_split_count; ++i) {
+        for (unsigned int j = 0; j <= minor_split_count; ++j) {
+            float const u = i * d_major;
+            float const v = j * d_minor;
+
+            // Compute the vertex position
+            glm::vec3 position = glm::vec3(
+                (major_radius + minor_radius * cos(v)) * cos(u),  // x-coordinate
+                (major_radius + minor_radius * cos(v)) * sin(u),  // y-coordinate
+                minor_radius * sin(v)                             // z-coordinate
+            );
+
+            // Compute the normal vector
+            glm::vec3 normal = glm::normalize(glm::vec3(
+                cos(v) * cos(u),
+                cos(v) * sin(u),
+                sin(v)
+            ));
+
+            // Compute the tangent vector (partial derivative with respect to u)
+            glm::vec3 tangent = glm::normalize(glm::vec3(
+                -sin(u), cos(u), 0.0f
+            ));
+
+            // Compute the binormal vector (partial derivative with respect to v)
+            glm::vec3 binormal = glm::normalize(glm::cross(normal, tangent));
+
+            // Compute the texture coordinates
+            glm::vec2 texcoord = glm::vec2(
+                static_cast<float>(i) / major_split_count,   // u-coordinate
+                static_cast<float>(j) / minor_split_count    // v-coordinate
+            );
+
+            positions[i * (minor_split_count + 1) + j] = position;
+            normals[i * (minor_split_count + 1) + j] = normal;
+            tangents[i * (minor_split_count + 1) + j] = tangent;
+            binormals[i * (minor_split_count + 1) + j] = binormal;
+            texcoords[i * (minor_split_count + 1) + j] = texcoord;
+        }
+    }
+
+    // Generate indices
+    std::vector<glm::uvec3> indices;
+    for (unsigned int i = 0; i < major_split_count; ++i) {
+        for (unsigned int j = 0; j < minor_split_count; ++j) {
+            unsigned int first = i * (minor_split_count + 1) + j;
+            unsigned int second = first + minor_split_count + 1;
+
+            // First triangle
+            indices.emplace_back(first, second, first + 1);
+            // Second triangle
+            indices.emplace_back(second, second + 1, first + 1);
+        }
+    }
+
+    // Create and bind VAO
+    glGenVertexArrays(1, &data.vao);
+    glBindVertexArray(data.vao);
+
+    // Create and bind VBO for positions
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, positions.size() * sizeof(glm::vec3), positions.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::vertices));
+    glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::vertices), 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+    // Create and bind VBO for normals
+    GLuint nbo;
+    glGenBuffers(1, &nbo);
+    glBindBuffer(GL_ARRAY_BUFFER, nbo);
+    glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), normals.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::normals));
+    glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::normals), 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+    // Create and bind VBO for tangents
+    GLuint tbo;
+    glGenBuffers(1, &tbo);
+    glBindBuffer(GL_ARRAY_BUFFER, tbo);
+    glBufferData(GL_ARRAY_BUFFER, tangents.size() * sizeof(glm::vec3), tangents.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::tangents));
+    glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::tangents), 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+    // Create and bind VBO for binormals
+    GLuint bbo;
+    glGenBuffers(1, &bbo);
+    glBindBuffer(GL_ARRAY_BUFFER, bbo);
+    glBufferData(GL_ARRAY_BUFFER, binormals.size() * sizeof(glm::vec3), binormals.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::binormals));
+    glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::binormals), 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+    // Create and bind VBO for texture coordinates
+    GLuint tcb;
+    glGenBuffers(1, &tcb);
+    glBindBuffer(GL_ARRAY_BUFFER, tcb);
+    glBufferData(GL_ARRAY_BUFFER, texcoords.size() * sizeof(glm::vec2), texcoords.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::texcoords));
+    glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::texcoords), 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+    // Create and bind EBO for indices
+    GLuint ebo;
+    glGenBuffers(1, &ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(glm::uvec3), indices.data(), GL_STATIC_DRAW);
+
+    // Set the number of indices for rendering
+    data.indices_nb = static_cast<GLsizei>(indices.size() * 3);
+
+    // Unbind VAO, VBO, and EBO
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    return data;
 }
+
 
 bonobo::mesh_data
 parametric_shapes::createCircleRing(float const radius,
