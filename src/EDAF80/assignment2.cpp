@@ -43,7 +43,7 @@ void
 edaf80::Assignment2::run()
 {
 	// Load the sphere geometry
-	auto const shape = parametric_shapes::/*createSphere(0.15f, 10u, 10u)*/createQuad(0.25f, 0.15f);
+	auto const shape = parametric_shapes::createSphere(0.15f, 10u,10u);
 	if (shape.vao == 0u)
 		return;
 
@@ -228,12 +228,12 @@ edaf80::Assignment2::run()
 			}
 		}
 
-		// circle_rings.render(mCamera.GetWorldToClipMatrix());
-		// if (show_control_points) {
-		// 	for (auto const& control_point : control_points) {
-		// 		control_point.render(mCamera.GetWorldToClipMatrix());
-		// 	}
-		// }
+		circle_rings.render(mCamera.GetWorldToClipMatrix());
+		if (show_control_points) {
+			for (auto const& control_point : control_points) {
+				control_point.render(mCamera.GetWorldToClipMatrix());
+			}
+		}
 
 		bool const opened = ImGui::Begin("Scene Controls", nullptr, ImGuiWindowFlags_None);
 		if (opened) {

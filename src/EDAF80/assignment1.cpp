@@ -302,8 +302,8 @@ int main()
 		// TODO: Replace this explicit rendering of the Earth and Moon
 		// with a traversal of the scene graph and rendering of all its
 		// nodes.
-		//glm::mat4 earthMatrix = earth.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f)), show_basis);
-		//moon.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), earthMatrix, show_basis);
+		glm::mat4 earthMatrix = earth.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f)), show_basis);
+		moon.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), earthMatrix, show_basis);
 
 		std::stack<CelestialBodyRef> celestialBodies;
 		celestialBodies.push({ &sun,glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f)) });
@@ -312,9 +312,9 @@ int main()
 		// 	CelestialBodyRef curr = celestialBodies.top();
 		// 	celestialBodies.pop();
 		// 	glm::mat4 parent = curr.body->render(animation_delta_time_us, camera.GetWorldToClipMatrix(), curr.parent_transform, show_basis);
-		// 	for each(CelestialBody * child in curr.body->get_children())
+		// 	foreach(CelestialBody* child in curr.body->get_children())
 		// 	{
-		// 		celestialBodies.push({ child,parent });
+		// 		celestialBodies.push({child,parent});
 		// 	}
 		// }
 
