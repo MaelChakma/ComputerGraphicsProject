@@ -43,12 +43,13 @@ void
 edaf80::Assignment2::run()
 {
 	// Load the sphere geometry
-	auto const shape = parametric_shapes::createSphere(0.15f, 10u, 10u)/*createQuad(0.25f, 0.15f)*/;
+	auto const shape = parametric_shapes::createCircleRing(2.0f,0.0f,2u,6u)/*createSphere(2.0,1,1)*/;
 	if (shape.vao == 0u)
 		return;
 
 	// Set up the camera
-	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.0f, 0.50f));
+	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, -0.5f, 0.0f));
+	//mCamera.mWorld.SetRotateX(glm::half_pi<float>());
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
 	mCamera.mMovementSpeed = glm::vec3(3.0f); // 3 m/s => 10.8 km/h
 
@@ -229,11 +230,11 @@ edaf80::Assignment2::run()
 		}
 
 		circle_rings.render(mCamera.GetWorldToClipMatrix());
-		if (show_control_points) {
-			for (auto const& control_point : control_points) {
-				control_point.render(mCamera.GetWorldToClipMatrix());
-			}
-		}
+		// if (show_control_points) {
+		// 	for (auto const& control_point : control_points) {
+		// 		control_point.render(mCamera.GetWorldToClipMatrix());
+		// 	}
+		// }
 
 		bool const opened = ImGui::Begin("Scene Controls", nullptr, ImGuiWindowFlags_None);
 		if (opened) {
@@ -247,7 +248,7 @@ edaf80::Assignment2::run()
 				circle_rings.set_program(selection_result.program, set_uniforms);
 			}
 			ImGui::Separator();
-			ImGui::Checkbox("Show control points", &show_control_points);
+			//ImGui::Checkbox("Show control points", &show_control_points);
 			ImGui::Checkbox("Enable interpolation", &interpolate);
 			ImGui::Checkbox("Use linear interpolation", &use_linear);
 			ImGui::SliderFloat("Catmull-Rom tension", &catmull_rom_tension, 0.0f, 1.0f);
