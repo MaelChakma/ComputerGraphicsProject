@@ -39,8 +39,8 @@ parametric_shapes::createQuad(float const width, float const height,
 
 	glGenBuffers(1, &data.bo);
 	glBindBuffer(GL_ARRAY_BUFFER, data.bo);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3)),
-	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::vertices));
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3),vertices.data(),GL_STATIC_DRAW); 
+    glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::vertices));
 
 	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::vertices),
 	                      3,
