@@ -89,16 +89,16 @@ parametric_shapes::createSphere(float const radius,
             float const phi = j * d_phi;
 
             glm::vec3 position = glm::vec3(
-                radius * sin(theta) * cos(phi),  // x
-                radius * cos(theta),             // y
-                radius * sin(theta) * sin(phi)   // z
+                radius * sin(theta) * sin(phi),  // x
+                radius * -cos(theta),             // y
+                radius * cos(theta) * sin(phi)   // z
             );
             glm::vec3 normal = glm::normalize(position);  // Normalize the position for the normal
-            glm::vec3 tangent = glm::vec3(-sin(phi), 0.0f, cos(phi));  // Tangent vector (partial derivative w.r.t. phi)
-            glm::vec3 binormal = glm::cross(normal, tangent);          // Binormal vector (cross product of normal and tangent)
+            glm::vec3 tangent = glm::vec3(radius * cos(theta) * sin(phi), 0.0f, -radius * sin(theta)* sin(phi));  // Tangent vector (partial derivative w.r.t. phi)
+            glm::vec3 binormal = glm::vec3(radius *sin(theta)*cos(phi), radius * sin(phi), radius * cos(theta) * cos(phi));          // Binormal vector (cross product of normal and tangent)
 
             positions[i * (longitude_split_count + 1) + j] = position;
-            normals[i * (longitude_split_count + 1) + j] = normal;
+            normals[i * (longitude_split_count + 1) + j] = glm::normalizw(normal);
             tangents[i * (longitude_split_count + 1) + j] = glm::normalize(tangent);
             binormals[i * (longitude_split_count + 1) + j] = glm::normalize(binormal);
             texcoords[i * (longitude_split_count + 1) + j] = glm::vec2(static_cast<float>(j) / longitude_split_count, static_cast<float>(i) / latitude_split_count);
