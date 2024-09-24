@@ -43,15 +43,17 @@ void
 edaf80::Assignment2::run()
 {
 	// Load the sphere geometry
-	auto const shape = parametric_shapes::createSphere(0.15f, 10u,10u);
+	auto const shape = //parametric_shapes::createCircleRing(2.0f, 0.75f, 40u, 4u);
+	parametric_shapes::createSphere(0.15f, 10u,10u);
 	if (shape.vao == 0u)
 		return;
 
 	// Set up the camera
-	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, -0.5f, 0.0f));
-	//mCamera.mWorld.SetRotateX(glm::half_pi<float>());
+	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.0f, 0.50f));
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
 	mCamera.mMovementSpeed = glm::vec3(3.0f); // 3 m/s => 10.8 km/h
+
+	mCamera.mWorld.SetRotateX(glm::half_pi<float>());
 
 	// Create the shader programs
 	ShaderProgramManager program_manager;
@@ -124,7 +126,7 @@ edaf80::Assignment2::run()
 
 	// Set whether to show the control points or not; it can always be changed
 	// at runtime through the "Scene Controls" window.
-	bool show_control_points = true;
+	bool show_control_points = false;
 
 	auto circle_rings = Node();
 	circle_rings.set_geometry(shape);
@@ -139,7 +141,7 @@ edaf80::Assignment2::run()
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 
-
+	/*
 	auto const control_point_sphere = parametric_shapes::createSphere(0.1f, 10u, 10u);
 	std::array<glm::vec3, 9> control_point_locations = {
 		glm::vec3( 0.0f,  0.0f,  0.0f),
@@ -159,7 +161,7 @@ edaf80::Assignment2::run()
 		control_point.set_program(&diffuse_shader, set_uniforms);
 		control_point.get_transform().SetTranslate(control_point_locations[i]);
 	}
-
+	*/
 
 	auto lastTime = std::chrono::high_resolution_clock::now();
 
@@ -231,9 +233,10 @@ edaf80::Assignment2::run()
 
 		circle_rings.render(mCamera.GetWorldToClipMatrix());
 		if (show_control_points) {
-			for (auto const& control_point : control_points) {
+	/*		for (auto const& control_point : control_points) {
 				control_point.render(mCamera.GetWorldToClipMatrix());
 			}
+			*/
 		}
 
 		bool const opened = ImGui::Begin("Scene Controls", nullptr, ImGuiWindowFlags_None);
