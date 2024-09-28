@@ -411,7 +411,7 @@ bonobo::loadTextureCubeMap(std::string const& posx, std::string const& negx,
 	// and `glGenBuffers()` that were used in assignment 2,
 	// `glGenTextures()` can create `n` texture objects at once. Here we
 	// only one texture object that will contain our whole cube map.
-	glGenTextures(1, /*! \todo fill me */nullptr);
+	glGenTextures(1, &texture);
 	assert(texture != 0u);
 
 	// Similarly to vertex arrays and buffers, we first need to bind the
@@ -440,7 +440,9 @@ bonobo::loadTextureCubeMap(std::string const& posx, std::string const& negx,
 	std::uint32_t width, height;
 	auto data = getTextureData(negx, width, height, false);
 	if (data.empty()) {
+		std::cerr << "Failed to load cube map textures: " << negx << std::endl;
 		glDeleteTextures(1, &texture);
+
 		return 0u;
 	}
 	// With all the texels available on the CPU, we now want to push them
@@ -452,18 +454,25 @@ bonobo::loadTextureCubeMap(std::string const& posx, std::string const& negx,
 	// as the target the face we want to fill in. In this case, we will
 	// start by filling the face sitting on the negative side of the
 	// x-axis by specifying GL_TEXTURE_CUBE_MAP_NEGATIVE_X.
-	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-	             /* mipmap level, you'll see that in EDAN35 */0,
-	             /* how are the components internally stored */GL_RGBA,
-	             /* the width of the cube map's face */static_cast<GLsizei>(width),
-	             /* the height of the cube map's face */static_cast<GLsizei>(height),
-	             /* must always be 0 */0,
-	             /* the format of the pixel data: which components are available */GL_RGBA,
-	             /* the type of each component */GL_UNSIGNED_BYTE,
-	             /* the pointer to the actual data on the CPU */reinterpret_cast<GLvoid const*>(data.data()));
+	// glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+	//              /* mipmap level, you'll see that in EDAN35 */0,
+	//              /* how are the components internally stored */GL_RGBA,
+	//              /* the width of the cube map's face */static_cast<GLsizei>(width),
+	//              /* the height of the cube map's face */static_cast<GLsizei>(height),
+	//              /* must always be 0 */0,
+	//              /* the format of the pixel data: which components are available */GL_RGBA,
+	//              /* the type of each component */GL_UNSIGNED_BYTE,
+	//              /* the pointer to the actual data on the CPU */reinterpret_cast<GLvoid const*>(data.data()));
 
-	//! \todo repeat now the texture filling for the 5 remaining faces
+	//the above code can be replaced with a for loop to render each face
+	for (unsigned int i = 0; i < 6; i++)
+    {
+		// Load the texture data for each face of the cube map
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X + i,
+						0, GL_RGB, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, GL_RGB, GL_UNSIGNED_BYTE, reinterpret_cast<GLvoid const*>(data.data()));
 
+		stbi_image_free(data.data()); //free up data space
+	}
 	if (generate_mipmap)
 		// Generate the mipmap hierarchy; wait for EDAN35 to understand
 		// what it does

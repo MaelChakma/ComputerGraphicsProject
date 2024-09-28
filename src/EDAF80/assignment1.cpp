@@ -312,7 +312,7 @@ int main()
 			CelestialBodyRef curr = celestialBodies.top();
 			celestialBodies.pop();
 			glm::mat4 parent = curr.body->render(animation_delta_time_us, camera.GetWorldToClipMatrix(), curr.parent_transform, show_basis);
-			for each (CelestialBody * child in curr.body->get_children())
+			for (CelestialBody* child : curr.body->get_children())
 			{
 				celestialBodies.push({ child,parent });
 			}
