@@ -415,9 +415,9 @@ bonobo::loadTextureCubeMap(std::string const &posx, std::string const &negx,
 						   std::string const &posz, std::string const &negz,
 						   bool generate_mipmap)
 {
-	GLuint texture = 0u;
-	glGenTextures(1, &texture);
-	assert(texture != 0u);
+    GLuint texture = 0u;
+    glGenTextures(1, &texture);
+    assert(texture != 0u);
 
 	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
 
@@ -457,7 +457,7 @@ bonobo::loadTextureCubeMap(std::string const &posx, std::string const &negx,
 
 	glBindTexture(GL_TEXTURE_CUBE_MAP, 0u); // Unbind the texture
 
-	return texture;
+    return texture;
 }
 GLuint
 bonobo::createProgram(std::string const &vert_shader_source_path, std::string const &frag_shader_source_path)
