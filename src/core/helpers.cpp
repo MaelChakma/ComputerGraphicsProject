@@ -447,6 +447,7 @@ bonobo::loadTextureCubeMap(std::string const &posx, std::string const &negx,
 	// argument. The function `getTextureData()` uses stb to read in the
 	// image files and return a `std::vector<std::uint8_t>` containing all the
 	// texels.
+	
 	std::uint32_t width, height;
 	auto datanegx = getTextureData(negx, width, height, false);
 	auto dataposx = getTextureData(posx, width, height, false);
@@ -526,6 +527,7 @@ bonobo::loadTextureCubeMap(std::string const &posx, std::string const &negx,
 				 /* the type of each component */ GL_UNSIGNED_BYTE,
 				 /* the pointer to the actual data on the CPU */ reinterpret_cast<GLvoid const *>(dataposz.data()));
 
+glBindTexture(GL_TEXTURE_CUBE_MAP, 0u);
 	return texture;
 }
 
