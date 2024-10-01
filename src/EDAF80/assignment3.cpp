@@ -120,7 +120,7 @@ edaf80::Assignment3::run()
 		config::resources_path("cubemaps/NissiBeach2/posy.jpg"),
 		config::resources_path("cubemaps/NissiBeach2/negy.jpg"),
 		config::resources_path("cubemaps/NissiBeach2/posz.jpg"),
-		config::resources_path("cubemaps/NissiBeach2/negz.jpg"));
+		config::resources_path("cubemaps/NissiBeach2/negz.jpg"), false);
 
 
 	Node skybox;
