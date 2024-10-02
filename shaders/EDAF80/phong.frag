@@ -1,18 +1,38 @@
 #version 410
 
-uniform sampler2D diffuse_texture;
-uniform int has_diffuse_texture;
+out vec4 FragColor;  // Final color of the fragment
 
-in VS_OUT {
-	vec2 texcoord;
-} fs_in;
+in vec3 FragPos;     // Fragment position from vertex shader
+in vec3 Normal;      // Fragment normal vector from vertex shader
 
-out vec4 frag_color;
+uniform vec3 lightPos;   // Position of the light source
+uniform vec3 viewPos;    // Position of the camera/viewer
+uniform vec3 lightColor; // Color/intensity of the light
+uniform vec3 objectColor; // Color of the object
+
+// Phong lighting parameters
+uniform float ambientStrength = 0.1;   // Ambient lighting strength
+uniform float specularStrength = 0.5;  // Specular lighting strength
+uniform int shininess = 32;            // Shininess of the surface
 
 void main()
 {
-	if (has_diffuse_texture != 0)
-		frag_color = texture(diffuse_texture, fs_in.texcoord);
-	else
-		frag_color = vec4(1.0);
+    // Ambient lighting
+    vec3 ambient = ambientStrength * lightColor;
+
+    // Diffuse lighting (Lambert's cosine law)
+    vec3 norm = normalize(Normal);
+    vec3 lightDir = normalize(lightPos - FragPos);
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diff * lightColor;
+
+    // Specular lighting (Blinn-Phong)
+    vec3 viewDir = normalize(viewPos - FragPos);
+    vec3 reflectDir = reflect(-lightDir, norm);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+    vec3 specular = specularStrength * spec * lightColor;
+
+    // Combine all components
+    vec3 result = (ambient + diffuse + specular) * objectColor;
+    FragColor = vec4(result, 1.0);
 }
