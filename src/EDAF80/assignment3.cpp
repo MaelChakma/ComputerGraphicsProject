@@ -90,12 +90,19 @@ void edaf80::Assignment3::run()
 											 skybox_shader);
 	if (skybox_shader == 0u)
 		LogError("Failed to load skybox shader");
-
 	auto light_position = glm::vec3(-2.0f, 4.0f, 2.0f);
 	auto const set_uniforms = [&light_position](GLuint program)
 	{
 		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
 	};
+
+	GLuint phong_shader = 0u;
+	program_manager.CreateAndRegisterProgram("Phong",
+											 {{ShaderType::vertex, "EDAF80/phong.vert"},
+											  {ShaderType::fragment, "EDAF80/phong.frag"}},
+											 phong_shader);
+	if (phong_shader == 0u)
+		LogError("Failed to load skybox shader");
 
 	bool use_normal_mapping = false;
 	auto camera_position = mCamera.mWorld.GetTranslation();
@@ -146,6 +153,7 @@ void edaf80::Assignment3::run()
 	demo_sphere.set_geometry(demo_shape);
 	demo_sphere.set_material_constants(demo_material);
 	demo_sphere.set_program(&fallback_shader, phong_set_uniforms);
+
 
 	glClearDepthf(1.0f);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
