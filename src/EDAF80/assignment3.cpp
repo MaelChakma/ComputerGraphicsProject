@@ -155,6 +155,7 @@ void edaf80::Assignment3::run()
 
 	bool use_orbit_camera = false;
 	std::int32_t demo_sphere_program_index = 0;
+	std::int32_t skybox_program_index = 0;
 	auto cull_mode = bonobo::cull_mode_t::disabled;
 	auto polygon_mode = bonobo::polygon_mode_t::fill;
 	bool show_logs = true;
@@ -236,7 +237,7 @@ void edaf80::Assignment3::run()
 				demo_sphere.set_program(demo_sphere_selection_result.program, phong_set_uniforms);
 			}
 
-			auto sky_box_selection_result = program_manager.SelectProgram("skybox", demo_sphere_program_index);
+			auto sky_box_selection_result = program_manager.SelectProgram("skybox", skybox_program_index);
 			if (sky_box_selection_result.was_selection_changed)
 			{
 				skybox.set_program(sky_box_selection_result.program, phong_set_uniforms);
