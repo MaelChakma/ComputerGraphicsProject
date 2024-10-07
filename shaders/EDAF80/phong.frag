@@ -36,8 +36,9 @@ void main()
 
     if (has_diffuse_texture == 1)
     {
-        vec3 textureColor = texture(diffuse_texture, TexCoord).rgb;
+        vec3 textureColor = texture(diffuse_texture, TexCoord).xyz;
         finalColor = textureColor;  
     }
 
     FragColor = vec4(finalColor, 1.0); 
+}
