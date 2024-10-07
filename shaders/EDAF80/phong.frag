@@ -1,34 +1,43 @@
-#version 410
+#version 410 core
 
 out vec4 FragColor;  // Final color of the fragment
 
-in vec3 Normal;     // fN
-in vec3 light;   // fL
-in vec3 viewPos;    // fV
+in vec3 Normal;       // fN (fragment normal)
+in vec3 light;        // fL (light direction)
+in vec3 viewPos;      // fV (view direction)
+in vec2 TexCoord;     // Texture coordinates passed from the vertex shader
 
-uniform vec3 diffuse; //kd
-uniform vec3 ambient;  //ka
-uniform vec3 specular;  //ks
+uniform vec3 diffuse;   // kd
+uniform vec3 ambient;   // ka
+uniform vec3 specular;  // ks
 uniform float shininess;            
 
-uniform sampler2D diffuse_texture;
+uniform sampler2D diffuse_texture;  // Texture sampler
+uniform int has_diffuse_texture;    // Flag to check if there's a texture
 
 void main()
 {
+    // Normalize vectors
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(light);
-    vec3 V = normalize(viewPos);
-    vec3 R = normalize(reflect(-lightDir, norm));
+    vec3 viewDir = normalize(viewPos);
+    vec3 reflectDir = reflect(-lightDir, norm);
 
+
+    // Diffuse component (Lambertian)
     float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse_ = diffuse * diff;
-    float spec = pow(max(dot(R, V), 0.0), shininess);
-    vec3 specular_ = specular * spec;
+    vec3 diffuseLight = diffuse * diff;
 
-    // Combine all components
-    vec3 result = vec3(ambient + diffuse_ + specular_);
-    FragColor.xyz = result;
-    FragColor.w = 1.0;
+    // Specular component (Phong reflection)
+    float spec = pow(max(dot(reflectDir, viewDir), 0.0), shininess);
+    vec3 specularLight = specular * spec;
 
-    //FragColor = texture(diffuse_texture, fs_in.vertex)
-}
+    vec3 finalColor = ambient + diffuseLight + specularLight;
+
+    if (has_diffuse_texture == 1)
+    {
+        vec3 textureColor = texture(diffuse_texture, TexCoord).rgb;
+        finalColor = textureColor;  
+    }
+
+    FragColor = vec4(finalColor, 1.0); 
