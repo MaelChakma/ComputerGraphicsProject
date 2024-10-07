@@ -102,16 +102,11 @@ void edaf80::Assignment3::run()
 											  {ShaderType::fragment, "EDAF80/phong.frag"}},
 											 phong_shader);
 	if (phong_shader == 0u)
-		LogError("Failed to load skybox shader");
+		LogError("Failed to load phong shader");
 
 	bool use_normal_mapping = false;
 	auto camera_position = mCamera.mWorld.GetTranslation();
-	auto const phong_set_uniforms = [&use_normal_mapping, &light_position, &camera_position](GLuint program)
-	{
-		glUniform1i(glGetUniformLocation(program, "use_normal_mapping"), use_normal_mapping ? 1 : 0);
-		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
-		glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, glm::value_ptr(camera_position));
-	};
+	
 
 	//
 	// Set up the two spheres used.
@@ -143,16 +138,32 @@ void edaf80::Assignment3::run()
 		return;
 	}
 
+GLuint diffuse_texture = bonobo::loadTexture2D(config::resources_path("textures/leather_red_02_nor_2k.jpg"));
+
+// GLuint specular_map = bonobo::loadTexture2D(config::resources_path("textures/leather_red_02_rough_2k.jpg"));
+
 	bonobo::material_data demo_material;
 	demo_material.ambient = glm::vec3(0.1f, 0.1f, 0.1f);
-	demo_material.diffuse = glm::vec3(0.7f, 0.2f, 0.4f);
+	demo_material.diffuse = glm::vec3(0.0f, 0.0f, 0.0f);
 	demo_material.specular = glm::vec3(1.0f, 1.0f, 1.0f);
 	demo_material.shininess = 10.0f;
+	auto const phong_set_uniforms = [&use_normal_mapping, &light_position, &camera_position, &demo_material](GLuint program)
+	{
+		glUniform1i(glGetUniformLocation(program, "use_normal_mapping"), use_normal_mapping ? 1 : 0);
+		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
+		glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, glm::value_ptr(camera_position));
+		glUniform3fv(glGetUniformLocation(program, "diffuse"),1, glm::value_ptr(demo_material.diffuse));
+		glUniform3fv(glGetUniformLocation(program, "specular"),1,glm::value_ptr(demo_material.specular));
+		glUniform3fv(glGetUniformLocation(program, "ambient"),1,glm::value_ptr(demo_material.ambient));
+	};
 
 	Node demo_sphere;
+
 	demo_sphere.set_geometry(demo_shape);
 	demo_sphere.set_material_constants(demo_material);
-	demo_sphere.set_program(&fallback_shader, phong_set_uniforms);
+	demo_sphere.add_texture("diffuse_texture",diffuse_texture,GL_TEXTURE_2D);
+	//demo_sphere.add_texture("specular", specular_map, GL_TEXTURE_2D);
+	demo_sphere.set_program(&phong_shader, phong_set_uniforms);
 
 
 	glClearDepthf(1.0f);

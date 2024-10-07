@@ -2,37 +2,33 @@
 
 out vec4 FragColor;  // Final color of the fragment
 
-in vec3 FragPos;     // Fragment position from vertex shader
-in vec3 Normal;      // Fragment normal vector from vertex shader
+in vec3 Normal;     // fN
+in vec3 light;   // fL
+in vec3 viewPos;    // fV
 
-uniform vec3 lightPos;   // Position of the light source
-uniform vec3 viewPos;    // Position of the camera/viewer
-uniform vec3 lightColor; // Color/intensity of the light
-uniform vec3 objectColor; // Color of the object
+uniform vec3 diffuse; //kd
+uniform vec3 ambient;  //ka
+uniform vec3 specular;  //ks
+uniform float shininess;            
 
-// Phong lighting parameters
-uniform float ambientStrength = 0.1;   // Ambient lighting strength
-uniform float specularStrength = 0.5;  // Specular lighting strength
-uniform int shininess = 32;            // Shininess of the surface
+uniform sampler2D diffuse_texture;
 
 void main()
 {
-    // Ambient lighting
-    vec3 ambient = ambientStrength * lightColor;
-
-    // Diffuse lighting (Lambert's cosine law)
     vec3 norm = normalize(Normal);
-    vec3 lightDir = normalize(lightPos - FragPos);
-    float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = diff * lightColor;
+    vec3 lightDir = normalize(light);
+    vec3 V = normalize(viewPos);
+    vec3 R = normalize(reflect(-lightDir, norm));
 
-    // Specular lighting (Blinn-Phong)
-    vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 reflectDir = reflect(-lightDir, norm);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-    vec3 specular = specularStrength * spec * lightColor;
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse_ = diffuse * diff;
+    float spec = pow(max(dot(R, V), 0.0), shininess);
+    vec3 specular_ = specular * spec;
 
     // Combine all components
-    vec3 result = (ambient + diffuse + specular) * objectColor;
-    FragColor = vec4(result, 1.0);
+    vec3 result = vec3(ambient + diffuse_ + specular_);
+    FragColor.xyz = result;
+    FragColor.w = 1.0;
+
+    FragColor = texture(diffuse_texture, fs_in.vertex)
 }
