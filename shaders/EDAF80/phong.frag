@@ -30,5 +30,5 @@ void main()
     FragColor.xyz = result;
     FragColor.w = 1.0;
 
-    FragColor = texture(diffuse_texture, fs_in.vertex)
+    //FragColor = texture(diffuse_texture, fs_in.vertex)
 }
