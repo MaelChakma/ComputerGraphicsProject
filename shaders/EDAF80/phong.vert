@@ -2,7 +2,7 @@
 
 layout (location = 0) in vec3 vertex;           // Vertex position
 layout (location = 1) in vec3 normal;           // Vertex normal
-layout (location = 2) in vec2 texCoord;         // Texture coordinates (changed to vec2)
+layout (location = 2) in vec2 texCoord;         // Texture coordinates
 
 out vec3 Normal;       // Pass normal vector to fragment shader
 out vec3 viewPos;      // Pass view vector to fragment shader

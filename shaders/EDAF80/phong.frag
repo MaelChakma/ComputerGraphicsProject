@@ -9,7 +9,7 @@ in vec2 TexCoord;     // Texture coordinates passed from the vertex shader
 
 uniform vec3 diffuse;   // kd
 uniform vec3 ambient;   // ka
-uniform vec3 specular;  // ks
+uniform sampler2D specular;  // ks
 uniform float shininess;            
 
 uniform sampler2D diffuse_texture;  // Texture sampler
@@ -17,6 +17,7 @@ uniform int has_diffuse_texture;    // Flag to check if there's a texture
 
 void main()
 {
+    vec3 specular_ = texture(specular,TexCoord).xyz;
     // Normalize vectors
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(light);
@@ -24,20 +25,20 @@ void main()
     vec3 reflectDir = reflect(-lightDir, norm);
 
 
-    // Diffuse component (Lambertian)
+    // Diffuse component 
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuseLight = diffuse * diff;
 
-    // Specular component (Phong reflection)
+    // Specular component
     float spec = pow(max(dot(reflectDir, viewDir), 0.0), shininess);
-    vec3 specularLight = specular * spec;
+    vec3 specularLight = specular_ * spec;
 
     vec3 finalColor = ambient + diffuseLight + specularLight;
 
     if (has_diffuse_texture == 1)
     {
         vec3 textureColor = texture(diffuse_texture, TexCoord).xyz;
-        finalColor = textureColor;  
+        finalColor *= textureColor;  
     }
 
     FragColor = vec4(finalColor, 1.0); 
