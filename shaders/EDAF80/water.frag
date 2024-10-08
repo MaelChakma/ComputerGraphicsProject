@@ -29,7 +29,6 @@ void main()
     
 	vec4 colorwater = mix(colordeep, colorshallow, facing);
 
-    vec3 water_color = texture(water_texture, vec2(fs_in.vertex.x, fs_in.vertex.z)).rgb;
     vec3 final_color = water_color * diff;
 
     FragColor = vec4(final_color, 1.0);
