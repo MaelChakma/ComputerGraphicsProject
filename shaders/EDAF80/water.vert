@@ -30,8 +30,7 @@ void main()
     vs_out.vertex = vec3(vertex_model_to_world * vec4(displaced_vertex, 1.0));
 
     // Transform the normal vector into world space
-    vs_out.normal = normalize(mat3(normal_model_to_world) * normal);  // Use mat3 to handle normal transformation
-
+    vs_out.normal = normalize(mat3(normal_model_to_world) * normal);  
     // Output the final vertex position in clip space
     gl_Position = vertex_world_to_clip * vec4(vs_out.vertex, 1.0);
 }
