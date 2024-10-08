@@ -15,21 +15,16 @@ uniform vec3 camera_position;   // Camera position in world space
 void main()
 {
     vec3 normal_map_sample = texture(normal_map, vec2(fs_in.vertex.x, fs_in.vertex.z)).rgb;
-    vec3 normal_tangent = normalize(normal_map_sample * 2.0 - 1.0);  // Convert to [-1, 1] range
+    vec3 normal_tangent = normalize(normal_map_sample * 2.0 - 1.0); 
 
     vec3 normal_world = normalize(fs_in.normal);
 
     vec3 light_dir = normalize(light_position - fs_in.vertex);
-    vec3 view_dir = normalize(camera_position - fs_in.vertex);
+    //vec3 view_dir = normalize(camera_position - fs_in.vertex);
 
     float diff = max(dot(normal_world, light_dir), 0.0);
 	vec4 colordeep = vec4(0.0, 0.0, 0.1, 1.0);
 	vec4 colorshallow = vec4(0.0, 0.5, 0.5, 1.0);
 
-    
-	vec4 colorwater = mix(colordeep, colorshallow, facing);
-
-    vec3 final_color = water_color * diff;
-
-    FragColor = vec4(final_color, 1.0);
+	FragColor = vec4(1.0) * clamp(diff, 0.0, 1.0);
 }
