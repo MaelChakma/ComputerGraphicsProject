@@ -26,11 +26,10 @@ void main()
     displaced_vertex.y += wave(vertex.xz, vec2(-1.0, 0.0), 0.2, 3.0, 1.0, 2.0, elapsed_time);
     displaced_vertex.y += wave(vertex.xz, vec2(1.0, 0.5), 0.15, 2.0, 1.5, 3.0, elapsed_time);
 
-    // Transform the displaced vertex position into world space
+
     vs_out.vertex = vec3(vertex_model_to_world * vec4(displaced_vertex, 1.0));
 
-    // Transform the normal vector into world space
     vs_out.normal = normalize(mat3(normal_model_to_world) * normal);  
-    // Output the final vertex position in clip space
+
     gl_Position = vertex_world_to_clip * vec4(vs_out.vertex, 1.0);
 }
