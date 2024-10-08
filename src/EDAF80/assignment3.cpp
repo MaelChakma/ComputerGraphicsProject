@@ -155,6 +155,7 @@ void edaf80::Assignment3::run()
 		glUniform3fv(glGetUniformLocation(program, "specular"), 1, glm::value_ptr(demo_material.specular));
 		glUniform3fv(glGetUniformLocation(program, "ambient"), 1, glm::value_ptr(demo_material.ambient));
 		glUniform1f(glGetUniformLocation(program, "shininess"), demo_material.shininess);
+		
 	};
 
 	Node demo_sphere;
