@@ -1,4 +1,4 @@
-#version 410 core
+#version 410 
 
 out vec4 FragColor;  // Final color of the fragment
 

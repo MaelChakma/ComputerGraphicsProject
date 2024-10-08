@@ -68,7 +68,7 @@ void edaf80::Assignment4::run()
 
 	GLuint water_shader = 0u;
 	program_manager.CreateAndRegisterProgram("water",
-											 {{ShaderType::vertex, "EDAF80/water.frag"},
+											 {{ShaderType::vertex, "EDAF80/water.vert"},
 											  {ShaderType::fragment, "EDAF80/water.frag"}},
 											 water_shader);
 	if (water_shader == 0u)
@@ -81,10 +81,16 @@ void edaf80::Assignment4::run()
 	};
 
 	float elapsed_time_s = 0.0f;
+	float wave_speed = 1.0f;
+	float wave_amplitude = 0.5f;
 
-	auto const water_uniforms = [&elapsed_time_s](GLuint program)
+	auto const water_uniforms = [&elapsed_time_s, &wave_speed, &wave_amplitude, &light_position](GLuint program)
 	{
+		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));	
 		glUniform1f(glGetUniformLocation(program, "elapsed_time_s"), elapsed_time_s);
+		glUniform1f(glGetUniformLocation(program, "wave_speed"), wave_speed);
+		glUniform1f(glGetUniformLocation(program, "wave_amplitude"), wave_amplitude);
+		glUniform1f(glGetUniformLocation(program, "elapsed_time"), elapsed_time_s);
 	};
 
 	auto quad_shape = parametric_shapes::createQuad(100.0f, 100.0f, 1000u, 1000u);
@@ -113,9 +119,14 @@ void edaf80::Assignment4::run()
 	skybox.set_program(&skybox_shader, set_uniforms);
 	skybox.add_texture("cubemap", cubemap, GL_TEXTURE_CUBE_MAP);
 
+
+	GLuint normal_map = bonobo::loadTexture2D(config::resources_path("res/textures/waves.png"));
+
 	Node quad;
 	quad.set_geometry(quad_shape);
+	//quad.set_program(&fallback_shader, set_uniforms);
 	quad.set_program(&water_shader, water_uniforms);
+	quad.add_texture("normal_map", normal_map, GL_TEXTURE_2D);
 
 	glClearDepthf(1.0f);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -198,7 +209,8 @@ void edaf80::Assignment4::run()
 
 		if (!shader_reload_failed)
 		{
-			// skybox.render(mCamera.GetWorldToClipMatrix());
+			elapsed_time_s += std::chrono::duration<float>(deltaTimeUs).count();
+			skybox.render(mCamera.GetWorldToClipMatrix());
 			quad.render(mCamera.GetWorldToClipMatrix());
 		}
 
