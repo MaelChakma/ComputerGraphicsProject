@@ -23,9 +23,8 @@ void main()
     vec3 specular_ = texture(specular, TexCoord).xyz;
     vec3 norm = normalize(Normal);
 
-l
     if (has_normal_map == 1)
-    {]
+    {
         vec3 normal_map_sample = texture(normal_map, TexCoord).xyz * 2.0 - 1.0;
         norm = normalize(normal_map_sample);
     }
@@ -37,7 +36,7 @@ l
 
     // Diffuse component
     float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuseLight = diffuse * diff;t
+    vec3 diffuseLight = diffuse * diff;
     float spec = pow(max(dot(reflectDir, viewDir), 0.0), shininess);
     vec3 specularLight = specular_ * spec;
 
