@@ -57,14 +57,23 @@ void edaf80::Assignment4::run()
 		LogError("Failed to load fallback shader");
 		return;
 	}
+
 	GLuint skybox_shader = 0u;
 	program_manager.CreateAndRegisterProgram("Skybox",
 											 {{ShaderType::vertex, "EDAF80/skybox.vert"},
 											  {ShaderType::fragment, "EDAF80/skybox.frag"}},
-
 											 skybox_shader);
 	if (skybox_shader == 0u)
 		LogError("Failed to load skybox shader");
+
+	GLuint water_shader = 0u;
+	program_manager.CreateAndRegisterProgram("water",
+											 {{ShaderType::vertex, "EDAF80/water.frag"},
+											  {ShaderType::fragment, "EDAF80/water.frag"}},
+											 water_shader);
+	if (water_shader == 0u)
+		LogError("Failed to load skybox shader");
+
 	auto light_position = glm::vec3(-2.0f, 4.0f, 2.0f);
 	auto const set_uniforms = [&light_position](GLuint program)
 	{
@@ -72,6 +81,41 @@ void edaf80::Assignment4::run()
 	};
 
 	float elapsed_time_s = 0.0f;
+
+	auto const water_uniforms = [&elapsed_time_s](GLuint program)
+	{
+		glUniform1f(glGetUniformLocation(program, "elapsed_time_s"), elapsed_time_s);
+	};
+
+	auto quad_shape = parametric_shapes::createQuad(100.0f, 100.0f, 1000u, 1000u);
+	if (quad_shape.vao == 0u)
+	{
+		LogError("Failed to retrieve the mesh for the demo sphere");
+		return;
+	}
+	auto skybox_shape = parametric_shapes::createSphere(100.0f, 100u, 100u);
+	if (skybox_shape.vao == 0u)
+	{
+		LogError("Failed to retrieve the mesh for the skybox");
+		return;
+	}
+
+	GLuint cubemap = bonobo::loadTextureCubeMap(
+		config::resources_path("cubemaps/NissiBeach2/posx.jpg"),
+		config::resources_path("cubemaps/NissiBeach2/negx.jpg"),
+		config::resources_path("cubemaps/NissiBeach2/posy.jpg"),
+		config::resources_path("cubemaps/NissiBeach2/negy.jpg"),
+		config::resources_path("cubemaps/NissiBeach2/posz.jpg"),
+		config::resources_path("cubemaps/NissiBeach2/negz.jpg"));
+
+	Node skybox;
+	skybox.set_geometry(skybox_shape);
+	skybox.set_program(&skybox_shader, set_uniforms);
+	skybox.add_texture("cubemap", cubemap, GL_TEXTURE_CUBE_MAP);
+
+	Node quad;
+	quad.set_geometry(quad_shape);
+	quad.set_program(&water_shader, water_uniforms);
 
 	glClearDepthf(1.0f);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -146,52 +190,26 @@ void edaf80::Assignment4::run()
 		//
 
 		mWindowManager.NewImGuiFrame();
-		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+		float wave_speed = 1.0f;
+		float wave_amplitude = 0.5f;
 
+		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 		bonobo::changePolygonMode(polygon_mode);
 
 		if (!shader_reload_failed)
 		{
-
-			auto skybox_shape = parametric_shapes::createSphere(20.0f, 100u, 100u);
-			if (skybox_shape.vao == 0u)
-			{
-				LogError("Failed to retrieve the mesh for the skybox");
-				return;
-			}
-
-			GLuint cubemap = bonobo::loadTextureCubeMap(
-				config::resources_path("cubemaps/NissiBeach2/posx.jpg"),
-				config::resources_path("cubemaps/NissiBeach2/negx.jpg"),
-				config::resources_path("cubemaps/NissiBeach2/posy.jpg"),
-				config::resources_path("cubemaps/NissiBeach2/negy.jpg"),
-				config::resources_path("cubemaps/NissiBeach2/posz.jpg"),
-				config::resources_path("cubemaps/NissiBeach2/negz.jpg"));
-
-			Node skybox;
-			skybox.set_geometry(skybox_shape);
-			skybox.set_program(&skybox_shader, set_uniforms);
-			skybox.add_texture("cubemap", cubemap, GL_TEXTURE_CUBE_MAP);
-
-			bonobo::mesh_data quad = parametric_shapes::createQuad(100.0f, 100.0f, 100, 100); // 100x100 tessellated quad
-
-			// Bind the VAO before drawing
-			glBindVertexArray(quad.vao);
-			glDrawElements(GL_TRIANGLES, quad.indices_nb, GL_UNSIGNED_INT, 0);
-			skybox.render(mCamera.GetWorldToClipMatrix());
-			//quad.render(mCamera.GetWorldToClipMatrix());
-			glBindVertexArray(0);
+			// skybox.render(mCamera.GetWorldToClipMatrix());
+			quad.render(mCamera.GetWorldToClipMatrix());
 		}
 
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		//
-		// Todo: If you want a custom ImGUI window, you can set it up
-		//       here
-		//
 
 		bool opened = ImGui::Begin("Scene Control", nullptr, ImGuiWindowFlags_None);
 		if (opened)
 		{
+
+			ImGui::SliderFloat("Wave Speed", &wave_speed, 0.1f, 5.0f);
+			ImGui::SliderFloat("Wave Amplitude", &wave_amplitude, 0.1f, 1.0f);
 			ImGui::Checkbox("Pause animation", &pause_animation);
 			ImGui::Checkbox("Use orbit camera", &use_orbit_camera);
 			ImGui::Separator();
