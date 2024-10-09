@@ -137,9 +137,11 @@ void edaf80::Assignment3::run()
 		return;
 	}
 
-	GLuint diffuse_texture = bonobo::loadTexture2D(config::resources_path("textures/leather_red_02_nor_2k.jpg"));
+	GLuint diffuse_texture = bonobo::loadTexture2D(config::resources_path("textures/leather_red_02_coll1_2k.jpg"));
 
 	GLuint specular_map = bonobo::loadTexture2D(config::resources_path("textures/leather_red_02_rough_2k.jpg"));
+
+	GLuint normal_map = bonobo::loadTexture2D(config::resources_path("textures/leather_red_02_nor_2k.jpg"));
 
 	bonobo::material_data demo_material;
 	demo_material.ambient = glm::vec3(0.1f, 0.1f, 0.1f);
@@ -162,7 +164,8 @@ void edaf80::Assignment3::run()
 	demo_sphere.set_geometry(demo_shape);
 	demo_sphere.set_material_constants(demo_material);
 	demo_sphere.add_texture("diffuse_texture", diffuse_texture, GL_TEXTURE_2D);
-	demo_sphere.add_texture("specular", specular_map, GL_TEXTURE_2D);
+	demo_sphere.add_texture("specular_map", specular_map, GL_TEXTURE_2D);
+	demo_sphere.add_texture("normal_map", normal_map, GL_TEXTURE_2D);
 	demo_sphere.set_program(&phong_shader, phong_set_uniforms);
 
 	glClearDepthf(1.0f);

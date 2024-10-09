@@ -20,6 +20,13 @@ float wave(vec2 position, vec2 direction, float amplitude, float frequency, floa
     return amplitude * pow(sin((position.x * direction.x + position.y * direction.y) * frequency + phase * time) * 0.5 + 0.5, sharpness);
 }
 
+float derivative(vec2 position, vec2 direction, float amplitude, float frequency, float phase, float sharpness, float time)
+{
+    return 0.5* sharpness * frequency * amplitude * pow(sin((position.x * direction.x + position.y * direction.y) * frequency + phase * time) * 0.5 + 0.5, sharpness-1) * cos(position.x * direction.x + position.y * direction.y);
+}
+
+
+
 void main()
 {
     vec3 displaced_vertex = vertex; 
@@ -29,7 +36,11 @@ void main()
 
     vs_out.vertex = vec3(vertex_model_to_world * vec4(displaced_vertex, 1.0));
 
-    vs_out.normal = normalize(mat3(normal_model_to_world) * normal);  
 
-    gl_Position = vertex_world_to_clip * vec4(vs_out.vertex, 1.0);
+
+    vs_out.normal = vec3(derivative(vertex.xz, vec2(-1.0, 0.0), 0.2, 3.0, 1.0, 2.0, elapsed_time),1,derivative(vertex.xz, vec2(-1.0, 0.0), 0.2, 3.0, 1.0, 2.0, elapsed_time)*0) ;  
+    vs_out.normal += vec3(derivative(vertex.xz, vec2(1.0, 0.5), 0.15, 2.0, 1.5, 3.0, elapsed_time),1,derivative(vertex.xz, vec2(1.0, 0.5), 0.15, 2.0, 1.5, 3.0, elapsed_time)*0.5);  
+    
+    
+    gl_Position = vertex_world_to_clip * vertex_model_to_world * vec4(vs_out.vertex, 1.0);
 }

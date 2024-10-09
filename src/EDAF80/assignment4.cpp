@@ -86,7 +86,7 @@ void edaf80::Assignment4::run()
 
 	auto const water_uniforms = [&elapsed_time_s, &wave_speed, &wave_amplitude, &light_position](GLuint program)
 	{
-		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));	
+		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
 		glUniform1f(glGetUniformLocation(program, "elapsed_time_s"), elapsed_time_s);
 		glUniform1f(glGetUniformLocation(program, "wave_speed"), wave_speed);
 		glUniform1f(glGetUniformLocation(program, "wave_amplitude"), wave_amplitude);
@@ -119,14 +119,14 @@ void edaf80::Assignment4::run()
 	skybox.set_program(&skybox_shader, set_uniforms);
 	skybox.add_texture("cubemap", cubemap, GL_TEXTURE_CUBE_MAP);
 
-
 	GLuint normal_map = bonobo::loadTexture2D(config::resources_path("res/textures/waves.png"));
 
 	Node quad;
 	quad.set_geometry(quad_shape);
-	//quad.set_program(&fallback_shader, set_uniforms);
+	// quad.set_program(&fallback_shader, set_uniforms);
 	quad.set_program(&water_shader, water_uniforms);
 	quad.add_texture("normal_map", normal_map, GL_TEXTURE_2D);
+	quad.add_texture("water_texture",cubemap,GL_TEXTURE_CUBE_MAP);
 
 	glClearDepthf(1.0f);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);

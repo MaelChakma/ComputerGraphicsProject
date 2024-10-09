@@ -3,14 +3,20 @@
 layout (location = 0) in vec3 vertex;           // Vertex position
 layout (location = 1) in vec3 normal;           // Vertex normal
 layout (location = 2) in vec2 texCoord;         // Texture coordinates
+layout (location = 3) in vec3 tangent;
+layout (location = 4) in vec3 binormal;
 
 out vec3 Normal;       // Pass normal vector to fragment shader
 out vec3 viewPos;      // Pass view vector to fragment shader
 out vec3 light;        // Pass light vector to fragment shader
 out vec2 TexCoord;     // Pass texture coordinates to fragment shader
+out vec3 tangents;
+out vec3 binormals;
+
+
 
 uniform mat4 vertex_model_to_world;    // Model matrix
-uniform mat4 normal_model_to_world;    // Normal matrix (inverse transpose of model matrix)
+uniform mat4 normal_model_to_world;    // Normal matrix
 uniform mat4 vertex_world_to_clip;     // Projection * View matrix
 uniform vec3 light_position;           // Position of the light source
 uniform vec3 camera_position;          // Position of the camera/viewer
@@ -19,6 +25,10 @@ void main()
 {
     // Calculate world-space position of the vertex
     vec3 worldPos = (vertex_model_to_world * vec4(vertex, 1.0)).xyz;
+
+    tangents = (vertex_model_to_world * vec4(tangent, 1.0)).xyz;
+    binormals = (vertex_model_to_world * vec4(binormal, 1.0)).xyz;
+
 
     // Transform normal to world space
     Normal = (normal_model_to_world * vec4(normal, 1.0)).xyz;
