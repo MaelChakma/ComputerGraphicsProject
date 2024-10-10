@@ -119,7 +119,7 @@ void edaf80::Assignment4::run()
 	skybox.set_program(&skybox_shader, set_uniforms);
 	skybox.add_texture("cubemap", cubemap, GL_TEXTURE_CUBE_MAP);
 
-	GLuint normal_map = bonobo::loadTexture2D(config::resources_path("res/textures/waves.png"));
+	GLuint normal_map = bonobo::loadTexture2D(config::resources_path("textures/waves.png"));
 
 	Node quad;
 	quad.set_geometry(quad_shape);
@@ -220,8 +220,8 @@ void edaf80::Assignment4::run()
 		if (opened)
 		{
 
-			ImGui::SliderFloat("Wave Speed", &wave_speed, 0.1f, 5.0f);
-			ImGui::SliderFloat("Wave Amplitude", &wave_amplitude, 0.1f, 1.0f);
+			ImGui::SliderFloat("Wave Speed", &wave_speed, 0.1f, wave_speed);
+			ImGui::SliderFloat("Wave Amplitude", &wave_amplitude, 0.1f, wave_amplitude);
 			ImGui::Checkbox("Pause animation", &pause_animation);
 			ImGui::Checkbox("Use orbit camera", &use_orbit_camera);
 			ImGui::Separator();

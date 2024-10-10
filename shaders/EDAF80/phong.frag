@@ -34,7 +34,6 @@ void main()
 
     }
 
-  
     vec3 lightDir = normalize(light);
     vec3 viewDir = normalize(viewPos);
     vec3 reflectDir = reflect(-lightDir, norm);
