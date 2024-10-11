@@ -23,7 +23,7 @@ void main()
 {
     mat3 TBN = mat3(normalize(tangents), normalize(binormals), normalize(fs_in.normal));        
 
-    vec3 normal_map_sample = texture(normal_map,normalCoord0).rgb*2.0- 1.0;
+    vec3 normal_map_sample = (texture(normal_map,normalCoord0).rgb)*2.0- 1.0;
     normal_map_sample += (texture(normal_map,normalCoord1).rgb)*2.0  - 1.0;
     normal_map_sample += (texture(normal_map,normalCoord2).rgb) *2.0  - 1.0;
 
@@ -35,14 +35,19 @@ void main()
 
     vec3 light_dir = normalize(light_position - fs_in.vertex);
     vec3 view_dir = normalize(camera_position - fs_in.vertex);
-    vec3 R = reflect(-view_dir,new_normal);
+    vec3 R = reflect(-view_dir, new_normal);
     vec4 reflection = texture(water_texture,R);
 
+    vec3 refraction = refract(-view_dir,new_normal,1.0/1.33);
+    vec4 refraction_color = texture(water_texture,refraction);
+
     float fresnel = 0.02037f + (1 - 0.02037f) * pow(1-dot(view_dir,new_normal),5);
+
+
 	vec4 colordeep = vec4(0.0, 0.0, 0.1, 1.0);
 	vec4 colorshallow = vec4(0.0, 0.5, 0.5, 1.0);
-    float facing = 1 - max(dot(view_dir,normal_world), 0);
-    FragColor = mix(colordeep,colorshallow, facing) + reflection * fresnel;
+    float facing = 1 - max(dot(view_dir,normal_world), 0.0);
+    
+    FragColor = mix(colordeep,colorshallow, facing)+ (reflection * fresnel) +(refraction_color * (1 - fresnel)) ;
 
-    FragColor = vec4(normal_map_sample, 1.0);
 }

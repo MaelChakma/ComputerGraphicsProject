@@ -72,7 +72,7 @@ void edaf80::Assignment4::run()
 											  {ShaderType::fragment, "EDAF80/water.frag"}},
 											 water_shader);
 	if (water_shader == 0u)
-		LogError("Failed to load skybox shader");
+		LogError("Failed to load water shader");
 
 	auto light_position = glm::vec3(-2.0f, 4.0f, 2.0f);
 	auto const set_uniforms = [&light_position](GLuint program)
@@ -82,15 +82,17 @@ void edaf80::Assignment4::run()
 
 	float elapsed_time_s = 0.0f;
 	float wave_speed = 1.0f;
-	float wave_amplitude = 0.5f;
+	float wave_amplitude = 0.50f;
 
-	auto const water_uniforms = [&elapsed_time_s, &wave_speed, &wave_amplitude, &light_position](GLuint program)
+	auto const water_uniforms = [&elapsed_time_s, &wave_speed, &wave_amplitude, &light_position, &camera_position](GLuint program)
 	{
 		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
 		glUniform1f(glGetUniformLocation(program, "elapsed_time_s"), elapsed_time_s);
 		glUniform1f(glGetUniformLocation(program, "wave_speed"), wave_speed);
 		glUniform1f(glGetUniformLocation(program, "wave_amplitude"), wave_amplitude);
 		glUniform1f(glGetUniformLocation(program, "elapsed_time"), elapsed_time_s);
+		glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, glm::value_ptr(camera_position));
+			
 	};
 
 	auto quad_shape = parametric_shapes::createQuad(100.0f, 100.0f, 1000u, 1000u);
@@ -126,7 +128,7 @@ void edaf80::Assignment4::run()
 	// quad.set_program(&fallback_shader, set_uniforms);
 	quad.set_program(&water_shader, water_uniforms);
 	quad.add_texture("normal_map", normal_map, GL_TEXTURE_2D);
-	quad.add_texture("water_texture",cubemap,GL_TEXTURE_CUBE_MAP);
+	quad.add_texture("water_texture", cubemap, GL_TEXTURE_CUBE_MAP);
 
 	glClearDepthf(1.0f);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -201,8 +203,6 @@ void edaf80::Assignment4::run()
 		//
 
 		mWindowManager.NewImGuiFrame();
-		float wave_speed = 1.0f;
-		float wave_amplitude = 0.5f;
 
 		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 		bonobo::changePolygonMode(polygon_mode);
@@ -220,8 +220,8 @@ void edaf80::Assignment4::run()
 		if (opened)
 		{
 
-			ImGui::SliderFloat("Wave Speed", &wave_speed, 0.1f, wave_speed);
-			ImGui::SliderFloat("Wave Amplitude", &wave_amplitude, 0.1f, wave_amplitude);
+			ImGui::SliderFloat("Wave Speed", &wave_speed, 0.1f, 5.0f);
+			ImGui::SliderFloat("Wave Amplitude", &wave_amplitude, 0.1f, 5.0f);
 			ImGui::Checkbox("Pause animation", &pause_animation);
 			ImGui::Checkbox("Use orbit camera", &use_orbit_camera);
 			ImGui::Separator();

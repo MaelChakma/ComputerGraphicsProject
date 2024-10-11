@@ -49,7 +49,7 @@ void main()
     {
         vec3 textureColor = texture(diffuse_texture, TexCoord).xyz;  
         diff = max(dot(norm, lightDir), 0.0);
-        diffuseLight = textureColor * diff;
+        diffuseLight =diffuse *textureColor * diff;
 
     }
 
