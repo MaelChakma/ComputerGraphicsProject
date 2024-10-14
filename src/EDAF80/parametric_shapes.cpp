@@ -283,70 +283,51 @@ parametric_shapes::createSphere(float const radius,
 	return data;
 }
 
-bonobo::mesh_data
-parametric_shapes::createTorus(float const major_radius,
-							   float const minor_radius,
-							   unsigned int const major_split_count,
-							   unsigned int const minor_split_count)
+bonobo::mesh_data createTorus(float const major_radius, float const minor_radius, unsigned int const major_split_count, unsigned int const minor_split_count)
 {
 	bonobo::mesh_data data;
 
-	// Number of vertices
-	unsigned int const vertex_count = (major_split_count + 1) * (minor_split_count + 1);
-	std::vector<glm::vec3> positions(vertex_count);
-	std::vector<glm::vec3> normals(vertex_count);
-	std::vector<glm::vec3> tangents(vertex_count);
-	std::vector<glm::vec3> binormals(vertex_count);
-	std::vector<glm::vec2> texcoords(vertex_count);
+	std::vector<glm::vec3> positions;
+	std::vector<glm::vec3> normals;
+	std::vector<glm::vec2> texcoords;
+	std::vector<glm::vec3> tangents;
+	std::vector<glm::uvec3> indices;
 
-	// Step in angles
-	float const d_major = glm::two_pi<float>() / major_split_count; // Step size in u (around the major axis)
-	float const d_minor = glm::two_pi<float>() / minor_split_count; // Step size in v (around the minor circle)
+	float const major_step = 2.0f * glm::pi<float>() / static_cast<float>(major_split_count);
+	float const minor_step = 2.0f * glm::pi<float>() / static_cast<float>(minor_split_count);
 
-	// Generate vertices, normals, tangents, and texture coordinates
 	for (unsigned int i = 0; i <= major_split_count; ++i)
 	{
+		float major_angle = i * major_step;
+		glm::vec3 major_circle_center = glm::vec3(major_radius * cos(major_angle), 0.0f, major_radius * sin(major_angle));
+
 		for (unsigned int j = 0; j <= minor_split_count; ++j)
 		{
-			float const u = i * d_major;
-			float const v = j * d_minor;
+			float minor_angle = j * minor_step;
 
-			// Compute the vertex position
-			glm::vec3 position = glm::vec3(
-				(major_radius + minor_radius * cos(v)) * cos(u), // x-coordinate
-				(major_radius + minor_radius * cos(v)) * sin(u), // y-coordinate
-				minor_radius * sin(v)							 // z-coordinate
-			);
+			// Calculate the vertex position on the torus
+			glm::vec3 vertex_position = major_circle_center + glm::vec3(minor_radius * cos(minor_angle) * cos(major_angle),
+																		minor_radius * sin(minor_angle),
+																		minor_radius * cos(minor_angle) * sin(major_angle));
 
-			// Compute the normal vector
-			glm::vec3 normal = glm::normalize(glm::vec3(
-				cos(v) * cos(u),
-				cos(v) * sin(u),
-				sin(v)));
+			positions.push_back(vertex_position);
 
-			// Compute the tangent vector (partial derivative with respect to u)
-			glm::vec3 tangent = glm::normalize(glm::vec3(
-				-sin(u), cos(u), 0.0f));
+			// Calculate the normal
+			glm::vec3 normal = glm::normalize(glm::vec3(cos(minor_angle) * cos(major_angle), sin(minor_angle), cos(minor_angle) * sin(major_angle)));
+			normals.push_back(normal);
 
-			// Compute the binormal vector (partial derivative with respect to v)
-			glm::vec3 binormal = glm::normalize(glm::cross(normal, tangent));
+			// Calculate the tangent (direction along the major circle)
+			glm::vec3 tangent = glm::normalize(glm::vec3(-sin(major_angle), 0.0f, cos(major_angle)));
+			tangents.push_back(tangent);
 
-			// Compute the texture coordinates
-			glm::vec2 texcoord = glm::vec2(
-				static_cast<float>(i) / major_split_count, // u-coordinate
-				static_cast<float>(j) / minor_split_count  // v-coordinate
-			);
-
-			positions[i * (minor_split_count + 1) + j] = position;
-			normals[i * (minor_split_count + 1) + j] = normal;
-			tangents[i * (minor_split_count + 1) + j] = tangent;
-			binormals[i * (minor_split_count + 1) + j] = binormal;
-			texcoords[i * (minor_split_count + 1) + j] = texcoord;
+			// Texture coordinates (u, v)
+			glm::vec2 texcoord = glm::vec2(static_cast<float>(i) / static_cast<float>(major_split_count),
+										   static_cast<float>(j) / static_cast<float>(minor_split_count));
+			texcoords.push_back(texcoord);
 		}
 	}
 
-	// Generate indices
-	std::vector<glm::uvec3> indices;
+	// Generate indices for the torus
 	for (unsigned int i = 0; i < major_split_count; ++i)
 	{
 		for (unsigned int j = 0; j < minor_split_count; ++j)
@@ -354,10 +335,8 @@ parametric_shapes::createTorus(float const major_radius,
 			unsigned int first = i * (minor_split_count + 1) + j;
 			unsigned int second = first + minor_split_count + 1;
 
-			// First triangle
-			indices.emplace_back(first, second, first + 1);
-			// Second triangle
-			indices.emplace_back(second, second + 1, first + 1);
+			indices.push_back(glm::uvec3(first, second, first + 1));	  // First triangle
+			indices.push_back(glm::uvec3(second, second + 1, first + 1)); // Second triangle
 		}
 	}
 
@@ -365,59 +344,38 @@ parametric_shapes::createTorus(float const major_radius,
 	glGenVertexArrays(1, &data.vao);
 	glBindVertexArray(data.vao);
 
-	// Create and bind VBO for positions
-	GLuint vbo;
-	glGenBuffers(1, &vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	// Create buffers for positions, normals, and texcoords
+	GLuint vbo[3], ibo;
+	glGenBuffers(3, vbo);
+	glGenBuffers(1, &ibo);
+
+	// Positions
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 	glBufferData(GL_ARRAY_BUFFER, positions.size() * sizeof(glm::vec3), positions.data(), GL_STATIC_DRAW);
 	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::vertices));
 	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::vertices), 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
-	// Create and bind VBO for normals
-	GLuint nbo;
-	glGenBuffers(1, &nbo);
-	glBindBuffer(GL_ARRAY_BUFFER, nbo);
+	// Normals
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
 	glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), normals.data(), GL_STATIC_DRAW);
 	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::normals));
 	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::normals), 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
-	// Create and bind VBO for tangents
-	GLuint tbo;
-	glGenBuffers(1, &tbo);
-	glBindBuffer(GL_ARRAY_BUFFER, tbo);
-	glBufferData(GL_ARRAY_BUFFER, tangents.size() * sizeof(glm::vec3), tangents.data(), GL_STATIC_DRAW);
-	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::tangents));
-	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::tangents), 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-
-	// Create and bind VBO for binormals
-	GLuint bbo;
-	glGenBuffers(1, &bbo);
-	glBindBuffer(GL_ARRAY_BUFFER, bbo);
-	glBufferData(GL_ARRAY_BUFFER, binormals.size() * sizeof(glm::vec3), binormals.data(), GL_STATIC_DRAW);
-	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::binormals));
-	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::binormals), 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-
-	// Create and bind VBO for texture coordinates
-	GLuint tcb;
-	glGenBuffers(1, &tcb);
-	glBindBuffer(GL_ARRAY_BUFFER, tcb);
+	// Texture Coordinates
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
 	glBufferData(GL_ARRAY_BUFFER, texcoords.size() * sizeof(glm::vec2), texcoords.data(), GL_STATIC_DRAW);
 	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::texcoords));
 	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::texcoords), 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 
-	// Create and bind EBO for indices
-	GLuint ebo;
-	glGenBuffers(1, &ebo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+	// Create and bind Index Buffer Object (IBO)
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(glm::uvec3), indices.data(), GL_STATIC_DRAW);
 
-	// Set the number of indices for rendering
-	data.indices_nb = static_cast<GLsizei>(indices.size() * 3);
+	// Unbind VAO
+	glBindVertexArray(0u);
 
-	// Unbind VAO, VBO, and EBO
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	// Set the number of indices
+	data.indices_nb = static_cast<GLsizei>(indices.size() * 3);
 
 	return data;
 }

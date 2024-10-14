@@ -42,6 +42,7 @@ void edaf80::Assignment5::run()
 	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.0f, 6.0f));
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
 	mCamera.mMovementSpeed = glm::vec3(3.0f); // 3 m/s => 10.8 km/h
+	auto camera_position = mCamera.mWorld.GetTranslation();
 
 	// Create the shader programs
 	ShaderProgramManager program_manager;
@@ -55,6 +56,13 @@ void edaf80::Assignment5::run()
 		LogError("Failed to load fallback shader");
 		return;
 	}
+	GLuint phong_shader = 0u;
+	program_manager.CreateAndRegisterProgram("Phong",
+											 {{ShaderType::vertex, "EDAF80/phong.vert"},
+											  {ShaderType::fragment, "EDAF80/phong.frag"}},
+											 phong_shader);
+	if (phong_shader == 0u)
+		LogError("Failed to load phong shader");
 
 	GLuint skybox_shader = 0u;
 	program_manager.CreateAndRegisterProgram("Skybox",
@@ -62,18 +70,31 @@ void edaf80::Assignment5::run()
 											  {ShaderType::fragment, "EDAF80/skybox.frag"}},
 											 skybox_shader);
 
-	auto skybox_shape = parametric_shapes::createSphere(100.0f, 100u, 100u);
+	auto skybox_shape = parametric_shapes::createSphere(500.0f, 1000u, 1000u);
+	auto astroid_ = parametric_shapes::createSphere(1.0f, 100u, 100u);
+	auto spaceship_inside_ = parametric_shapes::createSphere(1.0f, 100u, 100u);
+	auto spaceship_outside_ = parametric_shapes::createSphere(1.0f, 1.0f, 100u);
+
+	bool use_normal_mapping = true;
+	auto light_position = camera_position;
+
+	auto const set_uniforms = [&light_position](GLuint program)
+	{
+		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
+	};
+
+	auto const phong_set_uniforms = [&use_normal_mapping, &light_position, &camera_position, &astroid_](GLuint program)
+	{
+		glUniform1i(glGetUniformLocation(program, "use_normal_mapping"), use_normal_mapping ? 1 : 0);
+		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
+		glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, glm::value_ptr(camera_position));
+	};
+
 	if (skybox_shape.vao == 0u)
 	{
 		LogError("Failed to retrieve the mesh for the skybox");
 		return;
 	}
-
-	auto light_position = glm::vec3(-2.0f, 4.0f, 2.0f);
-	auto const set_uniforms = [&light_position](GLuint program)
-	{
-		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
-	};
 
 	GLuint cubemap = bonobo::loadTextureCubeMap(
 		config::resources_path("cubemaps/Space/right.png"),
@@ -87,6 +108,30 @@ void edaf80::Assignment5::run()
 	skybox.set_geometry(skybox_shape);
 	skybox.set_program(&skybox_shader, set_uniforms);
 	skybox.add_texture("cubemap", cubemap, GL_TEXTURE_CUBE_MAP);
+
+	GLuint diffuse_texture = bonobo::loadTexture2D(config::resources_path("astriods/ground_0010_ao_1k.jpg"));
+
+	GLuint specular_map = bonobo::loadTexture2D(config::resources_path("astriods/ground_0010_color_1k.jpg"));
+
+	GLuint normal_map = bonobo::loadTexture2D(config::resources_path("astriods/ground_0010_normal_opengl_1k.png"));
+
+	Node astroid;
+	astroid.set_geometry(astroid_);
+	astroid.add_texture("diffuse_texture", diffuse_texture, GL_TEXTURE_2D);
+	astroid.add_texture("specular_map", specular_map, GL_TEXTURE_2D);
+	astroid.add_texture("normal_map", normal_map, GL_TEXTURE_2D);
+	astroid.set_program(&phong_shader, phong_set_uniforms);
+
+	Node spaceship_inside;
+	spaceship_inside.set_geometry(spaceship_inside_);
+	spaceship_inside.set_program(&fallback_shader, set_uniforms);
+	spaceship_inside.add_texture("fallback", fallback_shader, GL_TEXTURE0);
+
+	Node spaceship_outside;
+	spaceship_outside.set_geometry(spaceship_outside_);
+	spaceship_outside.set_program(&fallback_shader, set_uniforms);
+	spaceship_outside.add_texture("fallback", fallback_shader, GL_TEXTURE0);
+
 	//
 	// Todo: Insert the creation of other shader programs.
 	//       (Check how it was done in assignment 3.)
@@ -102,6 +147,10 @@ void edaf80::Assignment5::run()
 
 	auto lastTime = std::chrono::high_resolution_clock::now();
 
+	bool use_orbit_camera = false;
+	std::int32_t skybox_program_index = 0;
+	auto cull_mode = bonobo::cull_mode_t::disabled;
+	auto polygon_mode = bonobo::polygon_mode_t::fill;
 	bool show_logs = true;
 	bool show_gui = true;
 	bool shader_reload_failed = false;
@@ -109,8 +158,21 @@ void edaf80::Assignment5::run()
 	float basis_thickness_scale = 1.0f;
 	float basis_length_scale = 1.0f;
 
+	changeCullMode(cull_mode);
+
 	while (!glfwWindowShouldClose(window))
 	{
+		glm::vec3 camera_position = mCamera.mWorld.GetTranslation();
+		float min_boundary = -500.0f / 2.0f;
+		float max_boundary = 500.0f / 2.0f;
+
+		// Clamp camera position to stay inside the skybox
+		camera_position.x = glm::clamp(camera_position.x, min_boundary, max_boundary);
+		camera_position.y = glm::clamp(camera_position.y, min_boundary, max_boundary);
+		camera_position.z = glm::clamp(camera_position.z, min_boundary, max_boundary);
+
+		// Set the clamped position back to the camera
+		mCamera.mWorld.SetTranslate(camera_position);
 		auto const nowTime = std::chrono::high_resolution_clock::now();
 		auto const deltaTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(nowTime - lastTime);
 		lastTime = nowTime;
@@ -160,6 +222,9 @@ void edaf80::Assignment5::run()
 		if (!shader_reload_failed)
 		{
 			skybox.render(mCamera.GetWorldToClipMatrix());
+			astroid.render(mCamera.GetWorldToClipMatrix());
+			//spaceship_inside.render(mCamera.GetWorldToClipMatrix());
+			//spaceship_outside.render(mCamera.GetWorldToClipMatrix());
 		}
 
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -171,12 +236,21 @@ void edaf80::Assignment5::run()
 		bool const opened = ImGui::Begin("Scene Controls", nullptr, ImGuiWindowFlags_None);
 		if (opened)
 		{
+			auto sky_box_selection_result = program_manager.SelectProgram("skybox", skybox_program_index);
+			if (sky_box_selection_result.was_selection_changed)
+			{
+				skybox.set_program(sky_box_selection_result.program, set_uniforms);
+			}
+			ImGui::Separator();
+			//ImGui::SliderFloat3("Light Position", glm::value_ptr(light_position), -20.0f, 20.0f);
+			ImGui::Separator();
+			ImGui::Checkbox("Use orbit camera", &use_orbit_camera);
+			ImGui::Separator();
 			ImGui::Checkbox("Show basis", &show_basis);
 			ImGui::SliderFloat("Basis thickness scale", &basis_thickness_scale, 0.0f, 100.0f);
 			ImGui::SliderFloat("Basis length scale", &basis_length_scale, 0.0f, 100.0f);
 		}
 		ImGui::End();
-
 		if (show_basis)
 			bonobo::renderBasis(basis_thickness_scale, basis_length_scale, mCamera.GetWorldToClipMatrix());
 		if (show_logs)
