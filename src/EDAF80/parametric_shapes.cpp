@@ -152,10 +152,10 @@ parametric_shapes::createQuad(float const width, float const height,
 
 bonobo::mesh_data
 parametric_shapes::createSphere(float const radius,
-								unsigned int const longitude_split_count,
+								unsigned int const minor_split_count,
 								unsigned int const latitude_split_count)
 {
-	auto const vertice_count = (longitude_split_count + 2) * (latitude_split_count + 2);
+	auto const vertice_count = (minor_split_count + 2) * (latitude_split_count + 2);
 
 	auto vertices = std::vector<glm::vec3>(vertice_count);
 	auto normals = std::vector<glm::vec3>(vertice_count);
@@ -163,14 +163,14 @@ parametric_shapes::createSphere(float const radius,
 	auto tangents = std::vector<glm::vec3>(vertice_count);
 	auto binormals = std::vector<glm::vec3>(vertice_count);
 
-	float const d_theta = glm::two_pi<float>() / (static_cast<float>(longitude_split_count + 1));
+	float const d_theta = glm::two_pi<float>() / (static_cast<float>(minor_split_count + 1));
 	float const d_phi = glm::pi<float>() / (static_cast<float>(latitude_split_count + 1));
 
 	// generate vertices iteratively
 	size_t index = 0u;
 	float theta = 0.0f;
 
-	for (unsigned int i = 0u; i < longitude_split_count + 2; ++i)
+	for (unsigned int i = 0u; i < minor_split_count + 2; ++i)
 	{
 		float phi = 0.0f;
 		for (unsigned int j = 0u; j < latitude_split_count + 2; ++j)
@@ -182,7 +182,7 @@ parametric_shapes::createSphere(float const radius,
 
 			// texture coordinates
 			texcoords[index] = glm::vec3(static_cast<float>(i) / (static_cast<float>(latitude_split_count)),
-										 static_cast<float>(j) / (static_cast<float>(longitude_split_count)),
+										 static_cast<float>(j) / (static_cast<float>(minor_split_count)),
 										 0.0f);
 
 			// tangent
@@ -208,22 +208,22 @@ parametric_shapes::createSphere(float const radius,
 	}
 
 	// create index array
-	auto index_sets = std::vector<glm::uvec3>(2u * (longitude_split_count + 1) * (latitude_split_count + 1));
+	auto index_sets = std::vector<glm::uvec3>(2u * (minor_split_count + 1) * (latitude_split_count + 1));
 
 	// generate indices iteratively
 	index = 0u;
-	for (unsigned int i = 0u; i < longitude_split_count + 1; ++i)
+	for (unsigned int i = 0u; i < minor_split_count + 1; ++i)
 	{
 		for (unsigned int j = 0u; j < latitude_split_count + 1; ++j)
 		{
-			index_sets[index] = glm::uvec3((longitude_split_count + 2) * (i + 0u) + (j + 0u),
-										   (longitude_split_count + 2) * (i + 0u) + (j + 1u),
-										   (longitude_split_count + 2) * (i + 1u) + (j + 1u));
+			index_sets[index] = glm::uvec3((minor_split_count + 2) * (i + 0u) + (j + 0u),
+										   (minor_split_count + 2) * (i + 0u) + (j + 1u),
+										   (minor_split_count + 2) * (i + 1u) + (j + 1u));
 			++index;
 
-			index_sets[index] = glm::uvec3((longitude_split_count + 2) * (i + 0u) + (j + 0u),
-										   (longitude_split_count + 2) * (i + 1u) + (j + 1u),
-										   (longitude_split_count + 2) * (i + 1u) + (j + 0u));
+			index_sets[index] = glm::uvec3((minor_split_count + 2) * (i + 0u) + (j + 0u),
+										   (minor_split_count + 2) * (i + 1u) + (j + 1u),
+										   (minor_split_count + 2) * (i + 1u) + (j + 0u));
 			++index;
 		}
 	}
@@ -283,102 +283,132 @@ parametric_shapes::createSphere(float const radius,
 	return data;
 }
 
-bonobo::mesh_data createTorus(float const major_radius, float const minor_radius, unsigned int const major_split_count, unsigned int const minor_split_count)
+bonobo::mesh_data 
+parametric_shapes::createTorus(float const major_radius, float const minor_radius, unsigned int const major_split_count, unsigned int const minor_split_count)
 {
-	bonobo::mesh_data data;
+    // Number of vertices to generate
+    auto const vertice_count = (major_split_count + 1) * (minor_split_count + 1);
 
-	std::vector<glm::vec3> positions;
-	std::vector<glm::vec3> normals;
-	std::vector<glm::vec2> texcoords;
-	std::vector<glm::vec3> tangents;
-	std::vector<glm::uvec3> indices;
+    // Initialize vertex-related buffers
+    auto vertices = std::vector<glm::vec3>(vertice_count);
+    auto normals = std::vector<glm::vec3>(vertice_count);
+    auto texcoords = std::vector<glm::vec2>(vertice_count);
+    auto tangents = std::vector<glm::vec3>(vertice_count);
+    auto binormals = std::vector<glm::vec3>(vertice_count);
 
-	float const major_step = 2.0f * glm::pi<float>() / static_cast<float>(major_split_count);
-	float const minor_step = 2.0f * glm::pi<float>() / static_cast<float>(minor_split_count);
+    // Step sizes for parametric coordinates
+    float const d_theta = glm::two_pi<float>() / static_cast<float>(major_split_count);
+    float const d_phi = glm::two_pi<float>() / static_cast<float>(minor_split_count);
 
-	for (unsigned int i = 0; i <= major_split_count; ++i)
-	{
-		float major_angle = i * major_step;
-		glm::vec3 major_circle_center = glm::vec3(major_radius * cos(major_angle), 0.0f, major_radius * sin(major_angle));
+    // Generate vertices iteratively
+    size_t index = 0u;
+    for (unsigned int i = 0u; i <= major_split_count; ++i) {
+        float theta = i * d_theta;  // Angle around the major circle
+        glm::vec3 major_center = glm::vec3(major_radius * cos(theta), 0.0f, major_radius * sin(theta));
 
-		for (unsigned int j = 0; j <= minor_split_count; ++j)
-		{
-			float minor_angle = j * minor_step;
+        for (unsigned int j = 0u; j <= minor_split_count; ++j) {
+            float phi = j * d_phi;  // Angle around the minor circle
 
-			// Calculate the vertex position on the torus
-			glm::vec3 vertex_position = major_circle_center + glm::vec3(minor_radius * cos(minor_angle) * cos(major_angle),
-																		minor_radius * sin(minor_angle),
-																		minor_radius * cos(minor_angle) * sin(major_angle));
+            // Vertex position in 3D space
+            glm::vec3 normal = glm::vec3(cos(theta) * cos(phi), sin(phi), sin(theta) * cos(phi));
+            vertices[index] = major_center + normal * minor_radius;
 
-			positions.push_back(vertex_position);
+            // Normal is the direction from the center of the tube
+            normals[index] = glm::normalize(normal);
 
-			// Calculate the normal
-			glm::vec3 normal = glm::normalize(glm::vec3(cos(minor_angle) * cos(major_angle), sin(minor_angle), cos(minor_angle) * sin(major_angle)));
-			normals.push_back(normal);
+            // Tangent is the direction along the major circle
+            tangents[index] = glm::normalize(glm::vec3(-sin(theta), 0.0f, cos(theta)));
 
-			// Calculate the tangent (direction along the major circle)
-			glm::vec3 tangent = glm::normalize(glm::vec3(-sin(major_angle), 0.0f, cos(major_angle)));
-			tangents.push_back(tangent);
+            // Binormal is the direction along the minor circle
+            binormals[index] = glm::normalize(glm::cross(tangents[index], normals[index]));
 
-			// Texture coordinates (u, v)
-			glm::vec2 texcoord = glm::vec2(static_cast<float>(i) / static_cast<float>(major_split_count),
-										   static_cast<float>(j) / static_cast<float>(minor_split_count));
-			texcoords.push_back(texcoord);
-		}
-	}
+            // Texture coordinates
+            texcoords[index] = glm::vec2(static_cast<float>(i) / static_cast<float>(major_split_count),
+                                         static_cast<float>(j) / static_cast<float>(minor_split_count));
 
-	// Generate indices for the torus
-	for (unsigned int i = 0; i < major_split_count; ++i)
-	{
-		for (unsigned int j = 0; j < minor_split_count; ++j)
-		{
-			unsigned int first = i * (minor_split_count + 1) + j;
-			unsigned int second = first + minor_split_count + 1;
+            ++index;
+        }
+    }
 
-			indices.push_back(glm::uvec3(first, second, first + 1));	  // First triangle
-			indices.push_back(glm::uvec3(second, second + 1, first + 1)); // Second triangle
-		}
-	}
+    // Generate indices for the torus
+    auto index_sets = std::vector<glm::uvec3>(2u * major_split_count * minor_split_count);
+    index = 0u;
+    for (unsigned int i = 0u; i < major_split_count; ++i) {
+        for (unsigned int j = 0u; j < minor_split_count; ++j) {
+            unsigned int first = i * (minor_split_count + 1) + j;
+            unsigned int second = first + minor_split_count + 1;
 
-	// Create and bind VAO
-	glGenVertexArrays(1, &data.vao);
-	glBindVertexArray(data.vao);
+            // First triangle of the quad
+            index_sets[index] = glm::uvec3(first, second, first + 1);
+            ++index;
 
-	// Create buffers for positions, normals, and texcoords
-	GLuint vbo[3], ibo;
-	glGenBuffers(3, vbo);
-	glGenBuffers(1, &ibo);
+            // Second triangle of the quad
+            index_sets[index] = glm::uvec3(first + 1, second, second + 1);
+            ++index;
+        }
+    }
 
-	// Positions
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, positions.size() * sizeof(glm::vec3), positions.data(), GL_STATIC_DRAW);
-	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::vertices));
-	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::vertices), 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    // Create and bind VAO
+    bonobo::mesh_data data;
+    glGenVertexArrays(1, &data.vao);
+    assert(data.vao != 0u);
+    glBindVertexArray(data.vao);
 
-	// Normals
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), normals.data(), GL_STATIC_DRAW);
-	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::normals));
-	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::normals), 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    // Calculate buffer sizes
+    auto const vertices_size = static_cast<GLsizeiptr>(vertices.size() * sizeof(glm::vec3));
+    auto const normals_size = static_cast<GLsizeiptr>(normals.size() * sizeof(glm::vec3));
+    auto const texcoords_size = static_cast<GLsizeiptr>(texcoords.size() * sizeof(glm::vec2));
+    auto const tangents_size = static_cast<GLsizeiptr>(tangents.size() * sizeof(glm::vec3));
+    auto const binormals_size = static_cast<GLsizeiptr>(binormals.size() * sizeof(glm::vec3));
+    auto const bo_size = vertices_size + normals_size + texcoords_size + tangents_size + binormals_size;
 
-	// Texture Coordinates
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
-	glBufferData(GL_ARRAY_BUFFER, texcoords.size() * sizeof(glm::vec2), texcoords.data(), GL_STATIC_DRAW);
-	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::texcoords));
-	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::texcoords), 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+    // Create and bind buffer objects
+    glGenBuffers(1, &data.bo);
+    assert(data.bo != 0u);
+    glBindBuffer(GL_ARRAY_BUFFER, data.bo);
+    glBufferData(GL_ARRAY_BUFFER, bo_size, nullptr, GL_STATIC_DRAW);
 
-	// Create and bind Index Buffer Object (IBO)
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(glm::uvec3), indices.data(), GL_STATIC_DRAW);
+    // Upload vertex data
+    glBufferSubData(GL_ARRAY_BUFFER, 0, vertices_size, vertices.data());
+    glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::vertices));
+    glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::vertices), 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<void*>(0));
 
-	// Unbind VAO
-	glBindVertexArray(0u);
+    // Upload normal data
+    glBufferSubData(GL_ARRAY_BUFFER, vertices_size, normals_size, normals.data());
+    glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::normals));
+    glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::normals), 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<void*>(vertices_size));
 
-	// Set the number of indices
-	data.indices_nb = static_cast<GLsizei>(indices.size() * 3);
+    // Upload texture coordinate data
+    glBufferSubData(GL_ARRAY_BUFFER, vertices_size + normals_size, texcoords_size, texcoords.data());
+    glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::texcoords));
+    glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::texcoords), 2, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<void*>(vertices_size + normals_size));
 
-	return data;
+    // Upload tangent data
+    glBufferSubData(GL_ARRAY_BUFFER, vertices_size + normals_size + texcoords_size, tangents_size, tangents.data());
+    glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::tangents));
+    glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::tangents), 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<void*>(vertices_size + normals_size + texcoords_size));
+
+    // Upload binormal data
+    glBufferSubData(GL_ARRAY_BUFFER, vertices_size + normals_size + texcoords_size + tangents_size, binormals_size, binormals.data());
+    glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::binormals));
+    glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::binormals), 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<void*>(vertices_size + normals_size + texcoords_size + tangents_size));
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0u);
+
+    // Create and bind index buffer
+    glGenBuffers(1, &data.ibo);
+    assert(data.ibo != 0u);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data.ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(index_sets.size() * sizeof(glm::uvec3)), index_sets.data(), GL_STATIC_DRAW);
+
+    glBindVertexArray(0u);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0u);
+
+    data.indices_nb = static_cast<GLsizei>(index_sets.size() * 3u);
+
+    return data;
 }
+
 
 bonobo::mesh_data
 parametric_shapes::createCircleRing(float const radius,
