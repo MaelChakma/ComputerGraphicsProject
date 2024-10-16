@@ -277,7 +277,7 @@ void edaf80::Assignment5::run()
 	};
 	State current_state = NEW_GAME;
 	float spaceship_health = 1.0f;
-	glm::vec3 spaceship_position = glm::vec3(0, 0, 0);
+	glm::vec3 spaceship_position = spaceship_inside.get_transform().GetTranslation();
 	while (!glfwWindowShouldClose(window))
 	{
 		switch (current_state)
@@ -296,8 +296,8 @@ void edaf80::Assignment5::run()
 		case PLAY_GAME:
 		{
 			camera_position = mCamera.mWorld.GetTranslation();
-			float min_boundary = -500.0f / 2.0f;
-			float max_boundary = 500.0f / 2.0f;
+			float min_boundary = -75.0f / 2.0f;
+			float max_boundary = 75.0f / 2.0f;
 
 			// Clamp camera position to stay inside the skybox
 			camera_position.x = glm::clamp(camera_position.x, min_boundary, max_boundary);
@@ -310,8 +310,8 @@ void edaf80::Assignment5::run()
 			auto const deltaTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(nowTime - lastTime);
 			lastTime = nowTime;
 
-			spaceship_inside.get_transform().SetTranslate(camera_position + camera_offset);
-			spaceship_outside.get_transform().SetTranslate(camera_position + camera_offset);
+			spaceship_inside.get_transform().SetTranslate(camera_position);
+			spaceship_outside.get_transform().SetTranslate(camera_position);
 
 			auto &io = ImGui::GetIO();
 			inputHandler.SetUICapture(io.WantCaptureMouse, io.WantCaptureKeyboard);
@@ -320,9 +320,6 @@ void edaf80::Assignment5::run()
 			glfwPollEvents();
 			inputHandler.Advance();
 			mCamera.Update(deltaTimeUs, inputHandler);
-			// glm::mat4 projViewMatrix = mCamera.mWorld.mar * mCamera.mWorld.GetMatrix();
-			// Frustum frustum = extractFrustum(projViewMatrix);
-
 			if (inputHandler.GetKeycodeState(GLFW_KEY_R) & JUST_PRESSED)
 			{
 				shader_reload_failed = !program_manager.ReloadAllPrograms();
@@ -376,25 +373,14 @@ void edaf80::Assignment5::run()
 			glfwGetFramebufferSize(window, &framebuffer_width, &framebuffer_height);
 			glViewport(0, 0, framebuffer_width, framebuffer_height);
 			mWindowManager.NewImGuiFrame();
-			// Inside your PLAY_GAME case:
-			double mouseX, mouseY;
-			glfwGetCursorPos(window, &mouseX, &mouseY);
-
-			// Get the size of the window (used to normalize the cursor position)
-			int width, height;
-			glfwGetWindowSize(window, &width, &height);
-
-			// Normalize the mouse coordinates to be in the range [-1, 1]
-			float normalizedX = (2.0f * (mouseX / width)) - 1.0f;
-			float normalizedY = 1.0f - (2.0f * (mouseY / height)); // Inverting Y axis
 
 			// Define speed and update spaceship position
 			float mouseSensitivity = 0.05f; // Adjust as needed
-			glm::vec3 direction = glm::normalize(glm::vec3(normalizedX, normalizedY, 0.0f));
-			spaceship_position += direction * mouseSensitivity;
+			glm::vec3 direction = camera_position;
+			spaceship_position = direction;
 
 			// Ensure spaceship stays within bounds (if needed, like clamping or custom boundary logic)
-			spaceship_position = glm::clamp(spaceship_position, glm::vec3(-min_boundary), glm::vec3(max_boundary));
+			//spaceship_position = glm::clamp(spaceship_position, glm::vec3(-min_boundary), glm::vec3(max_boundary));
 
 			// Update spaceship node positions
 			spaceship_inside.get_transform().SetTranslate(spaceship_position);
