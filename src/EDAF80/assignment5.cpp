@@ -277,6 +277,7 @@ void edaf80::Assignment5::run()
 	};
 	State current_state = NEW_GAME;
 	float spaceship_health = 1.0f;
+	glm::vec3 spaceship_position = glm::vec3(0, 0, 0);
 	while (!glfwWindowShouldClose(window))
 	{
 		switch (current_state)
@@ -311,7 +312,6 @@ void edaf80::Assignment5::run()
 
 			spaceship_inside.get_transform().SetTranslate(camera_position + camera_offset);
 			spaceship_outside.get_transform().SetTranslate(camera_position + camera_offset);
-			glm::vec3 spaceship_position = spaceship_inside.get_transform().GetTranslation();
 
 			auto &io = ImGui::GetIO();
 			inputHandler.SetUICapture(io.WantCaptureMouse, io.WantCaptureKeyboard);
@@ -347,21 +347,23 @@ void edaf80::Assignment5::run()
 				// Compute direction vector from asteroid to spaceship
 				glm::vec3 direction = glm::normalize(spaceship_position - asteroid_positions[i]);
 
-				//if (isAsteroidInView(frustum, asteroid_positions[i], 1.0f))
+				// if (isAsteroidInView(frustum, asteroid_positions[i], 1.0f))
 				//{
-					// Update velocity for the asteroid
-					asteroid_velocities[i] = direction * asteroid_speed;
+				//  Update velocity for the asteroid
+				asteroid_velocities[i] = direction * asteroid_speed;
 
-					// Update the position of the asteroid based on velocity
-					asteroid_positions[i] += asteroid_velocities[i];
+				// Update the position of the asteroid based on velocity
+				asteroid_positions[i] += asteroid_velocities[i];
+				asteroids[i].get_transform().SetTranslate(asteroid_positions[i]);
+				if (checkCollision(spaceship_position, asteroid_positions[i], 0.5f + 0.2f, 1.0))
+				{
+					asteroid_positions[i] = glm::vec3(dis(gen), dis(gen), dis(gen));
 					asteroids[i].get_transform().SetTranslate(asteroid_positions[i]);
-					if (checkCollision(spaceship_position, asteroid_positions[i], 0.5f + 0.2f, 1.0))
-					{
-						spaceship_health -= 0.25f;
-						// std::cout<< (spaceship_position);
-						// std::cout << (camera_position);
-						spaceship_health = glm::clamp(spaceship_health, 0.0f, 1.0f);
-					}
+					spaceship_health -= 0.25f;
+					// std::cout<< (spaceship_position);
+					// std::cout << (camera_position);
+					spaceship_health = glm::clamp(spaceship_health, 0.0f, 1.0f);
+				}
 				//}
 				if (spaceship_health <= 0)
 				{
@@ -373,6 +375,29 @@ void edaf80::Assignment5::run()
 			glfwGetFramebufferSize(window, &framebuffer_width, &framebuffer_height);
 			glViewport(0, 0, framebuffer_width, framebuffer_height);
 			mWindowManager.NewImGuiFrame();
+			// Inside your PLAY_GAME case:
+			double mouseX, mouseY;
+			glfwGetCursorPos(window, &mouseX, &mouseY);
+
+			// Get the size of the window (used to normalize the cursor position)
+			int width, height;
+			glfwGetWindowSize(window, &width, &height);
+
+			// Normalize the mouse coordinates to be in the range [-1, 1]
+			float normalizedX = (2.0f * (mouseX / width)) - 1.0f;
+			float normalizedY = 1.0f - (2.0f * (mouseY / height)); // Inverting Y axis
+
+			// Define speed and update spaceship position
+			float mouseSensitivity = 0.05f; // Adjust as needed
+			glm::vec3 direction = glm::normalize(glm::vec3(normalizedX, normalizedY, 0.0f));
+			spaceship_position += direction * mouseSensitivity;
+
+			// Ensure spaceship stays within bounds (if needed, like clamping or custom boundary logic)
+			spaceship_position = glm::clamp(spaceship_position, glm::vec3(-min_boundary), glm::vec3(max_boundary));
+
+			// Update spaceship node positions
+			spaceship_inside.get_transform().SetTranslate(spaceship_position);
+			spaceship_outside.get_transform().SetTranslate(spaceship_position);
 
 			glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
@@ -382,14 +407,11 @@ void edaf80::Assignment5::run()
 
 				for (int i = 0; i < asteroid_count; i++)
 				{
-					//if (isAsteroidInView(frustum, asteroid_positions[i], 1.0f))
+					// if (isAsteroidInView(frustum, asteroid_positions[i], 1.0f))
 					//{
-						asteroids[i].render(mCamera.GetWorldToClipMatrix());
+					asteroids[i].render(mCamera.GetWorldToClipMatrix());
 					//}
 				}
-
-				glm::mat4 transform = mCamera.mWorld.GetMatrix();
-				transform = glm::translate(transform, glm::vec3(0.0f, -1.00f, -15.0f));
 				spaceship_inside.render(mCamera.GetWorldToClipMatrix());
 				spaceship_outside.render(mCamera.GetWorldToClipMatrix());
 			}
