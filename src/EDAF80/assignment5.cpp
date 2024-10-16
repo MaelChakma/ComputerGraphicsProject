@@ -1,6 +1,6 @@
 #include "assignment5.hpp"
 #include "parametric_shapes.cpp"
-
+#include "random"
 #include "config.hpp"
 #include "core/Bonobo.h"
 #include "core/FPSCamera.h"
@@ -85,6 +85,41 @@ void edaf80::Assignment5::run()
 	bool use_normal_mapping = true;
 	auto light_position = glm::vec3(250.0f, 250.0f, -250.0f);
 
+	// Random number generation setup for asteroid positions
+	std::random_device rd;										// Seed generator
+	std::mt19937 gen(rd());										// Random number generator
+	std::uniform_real_distribution<float> dis(-100.0f, 100.0f); // Range for asteroid placement within skybox
+
+	// Create multiple asteroids with random positions
+	const int asteroid_count = 10; // Number of asteroids
+	std::vector<Node> asteroids;
+	std::vector<glm::vec3> asteroid_positions;
+	std::vector<glm::vec3> asteroid_velocities; // Store velocities for each asteroid
+
+	float asteroid_speed = 0.05f; // Speed factor for asteroid movement
+
+	for (int i = 0; i < asteroid_count; ++i)
+	{
+		Node asteroid;
+		asteroid.set_geometry(astroid_); // Assuming `astroid_` is your asteroid model
+
+		// Generate random position within the skybox
+		glm::vec3 position = glm::vec3(dis(gen), dis(gen), dis(gen));
+		asteroid_positions.push_back(position);
+		asteroid.get_transform().SetTranslate(position);
+
+		// Initial velocity is set to zero, will be updated to point towards the spaceship
+		asteroid_velocities.push_back(glm::vec3(0.0f));
+
+		// Add asteroid node to vector
+		asteroids.push_back(asteroid);
+	}
+
+	// Load textures for the asteroids
+	GLuint diffuse_texture_astroid = bonobo::loadTexture2D(config::resources_path("astriods/ground_0010_ao_1k.jpg"));
+	GLuint specular_map_astroid = bonobo::loadTexture2D(config::resources_path("astriods/ground_0010_color_1k.jpg"));
+	GLuint normal_map_astroid = bonobo::loadTexture2D(config::resources_path("astriods/ground_0010_normal_opengl_1k.png"));
+
 	auto const set_uniforms = [&light_position](GLuint program)
 	{
 		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
@@ -116,16 +151,13 @@ void edaf80::Assignment5::run()
 	skybox.set_program(&skybox_shader, set_uniforms);
 	skybox.add_texture("cubemap", cubemap, GL_TEXTURE_CUBE_MAP);
 
-	GLuint diffuse_texture_astroid = bonobo::loadTexture2D(config::resources_path("astriods/ground_0010_ao_1k.jpg"));
-	GLuint specular_map_astroid = bonobo::loadTexture2D(config::resources_path("astriods/ground_0010_color_1k.jpg"));
-	GLuint normal_map_astroid = bonobo::loadTexture2D(config::resources_path("astriods/ground_0010_normal_opengl_1k.png"));
-
-	Node astroid;
-	astroid.set_geometry(astroid_);
-	astroid.add_texture("diffuse_texture", diffuse_texture_astroid, GL_TEXTURE_2D);
-	astroid.add_texture("specular_map", specular_map_astroid, GL_TEXTURE_2D);
-	astroid.add_texture("normal_map", normal_map_astroid, GL_TEXTURE_2D);
-	astroid.set_program(&phong_shader, phong_set_uniforms);
+	for (auto &asteroid : asteroids)
+	{
+		asteroid.add_texture("diffuse_texture", diffuse_texture_astroid, GL_TEXTURE_2D);
+		asteroid.add_texture("specular_map", specular_map_astroid, GL_TEXTURE_2D);
+		asteroid.add_texture("normal_map", normal_map_astroid, GL_TEXTURE_2D);
+		asteroid.set_program(&phong_shader, phong_set_uniforms); // Apply Phong shader
+	}
 
 	Node spaceship_inside;
 	spaceship_inside.set_geometry(spaceship_inside_);
@@ -144,14 +176,6 @@ void edaf80::Assignment5::run()
 	spaceship_outside.set_program(&phong_shader, phong_set_uniforms);
 
 	spaceship_inside.add_child(&spaceship_outside);
-	//
-	// Todo: Insert the creation of other shader programs.
-	//       (Check how it was done in assignment 3.)
-	//
-
-	//
-	// Todo: Load your geometry
-	//
 
 	glClearDepthf(1.0f);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -227,44 +251,51 @@ void edaf80::Assignment5::run()
 			if (inputHandler.GetKeycodeState(GLFW_KEY_F11) & JUST_RELEASED)
 				mWindowManager.ToggleFullscreenStatusForWindow(window);
 
-			int N = 1;
-			for (int i = 0; i < N; i++)
+			glm::vec3 spaceship_position = camera_position + glm::vec3(0.0f, -1.0f, -15.0f);
+
+			std::cout << spaceship_position;
+			std::cout << camera_position;
+
+			// Update asteroid velocities and positions towards the spaceship
+			for (int i = 0; i < asteroid_count; ++i)
 			{
-				if (checkCollision(glm::vec3(spaceship_inside.get_transform().GetMatrix()), astroid.get_transform().GetMatrix(), 0.5f + 0.2f, 1.0))
+				// Compute direction vector from asteroid to spaceship
+				glm::vec3 direction = glm::normalize(spaceship_position - asteroid_positions[i]);
+
+				// Update velocity for the asteroid
+				asteroid_velocities[i] = direction * asteroid_speed;
+
+				// Update the position of the asteroid based on velocity
+				asteroid_positions[i] += asteroid_velocities[i];
+				asteroids[i].get_transform().SetTranslate(asteroid_positions[i]);
+				if (checkCollision(spaceship_position, asteroid_positions[i], 0.5f + 0.2f, 1.0))
 				{
 					current_state = END_GAME;
 				}
 			}
-			// Retrieve the actual framebuffer size: for HiDPI monitors,
-			// you might end up with a framebuffer larger than what you
-			// actually asked for. For example, if you ask for a 1920x1080
-			// framebuffer, you might get a 3840x2160 one instead.
-			// Also it might change as the user drags the window between
-			// monitors with different DPIs, or if the fullscreen status is
-			// being toggled.
+
+			int N = 1;
 			int framebuffer_width, framebuffer_height;
 			glfwGetFramebufferSize(window, &framebuffer_width, &framebuffer_height);
 			glViewport(0, 0, framebuffer_width, framebuffer_height);
-
-			//
-			// Todo: If you need to handle inputs, you can do it here
-			//
-
 			mWindowManager.NewImGuiFrame();
 
 			glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-
+			bool in_view = true;
 			if (!shader_reload_failed)
 			{
 				skybox.render(mCamera.GetWorldToClipMatrix());
-				glm::mat4 transformastr = glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 5.0f, 5.0f));
 
-				astroid.render(mCamera.GetWorldToClipMatrix(), transformastr);
+				for (int i = 0; i < asteroid_count; i++)
+				{
+					if (in_view)
+					{
+						asteroids[i].render(mCamera.GetWorldToClipMatrix());
+					}
+				}
 
-				std::cout << spaceship_inside.get_transform().GetMatrix();
-				// std::cout << (astroid.get_transform().GetTranslation());
 				glm::mat4 transform = mCamera.mWorld.GetMatrix();
-				transform = glm::translate(transform, glm::vec3(0.0f, -1.0f, -5.0f));
+				transform = glm::translate(transform, glm::vec3(0.0f, -1.00f, -15.0f));
 				spaceship_inside.render(mCamera.GetWorldToClipMatrix(), transform);
 				spaceship_outside.render(mCamera.GetWorldToClipMatrix(), transform);
 			}
@@ -275,37 +306,39 @@ void edaf80::Assignment5::run()
 			// Todo: If you want a custom ImGUI window, you can set it up
 			//       here
 			//
-			bool const opened = ImGui::Begin("Scene Controls", nullptr, ImGuiWindowFlags_None);
-			if (opened)
-			{
-				auto sky_box_selection_result = program_manager.SelectProgram("skybox", skybox_program_index);
-				if (sky_box_selection_result.was_selection_changed)
-				{
-					skybox.set_program(sky_box_selection_result.program, set_uniforms);
-				}
-				ImGui::Separator();
-				// ImGui::SliderFloat3("Light Position", glm::value_ptr(light_position), -20.0f, 20.0f);
-				ImGui::Separator();
-				ImGui::Checkbox("Use orbit camera", &use_orbit_camera);
-				ImGui::Separator();
-				ImGui::Checkbox("Show basis", &show_basis);
-				ImGui::SliderFloat("Basis thickness scale", &basis_thickness_scale, 0.0f, 100.0f);
-				ImGui::SliderFloat("Basis length scale", &basis_length_scale, 0.0f, 100.0f);
-			}
+			ImGui::Begin("Scene Controls", nullptr, ImGuiWindowFlags_None);
 			ImGui::End();
-			if (show_basis)
-				bonobo::renderBasis(basis_thickness_scale, basis_length_scale, mCamera.GetWorldToClipMatrix());
-			if (show_logs)
-				Log::View::Render();
-			mWindowManager.RenderImGuiFrame(show_gui);
+			ImGui::Render();
 
 			glfwSwapBuffers(window);
 			break;
 		}
 		case END_GAME:
 		{
-			// printf("dead");
-			// break;
+			ImGui::NewFrame();
+			ImGui::Begin("Game Over", nullptr, ImGuiWindowFlags_None);
+			ImGui::Text("Game Over! You were hit by an asteroid.");
+			ImGui::Separator();
+			if (ImGui::Button("Restart Game"))
+			{
+
+				// Reset asteroid positions
+				for (int i = 0; i < asteroid_count; ++i)
+				{
+					asteroid_positions[i] = glm::vec3(dis(gen), dis(gen), dis(gen));
+					asteroids[i].get_transform().SetTranslate(asteroid_positions[i]);
+				}
+				// Restart the game
+				current_state = PLAY_GAME;
+			}
+			if (ImGui::Button("Quit Game"))
+			{
+				glfwSetWindowShouldClose(window, true);
+			}
+			ImGui::End();
+			ImGui::Render();
+			mWindowManager.RenderImGuiFrame(show_gui);
+			glfwSwapBuffers(window);
 		}
 		}
 	}
