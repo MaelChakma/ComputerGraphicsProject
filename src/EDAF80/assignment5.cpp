@@ -315,6 +315,7 @@ void edaf80::Assignment5::run()
 
 			auto &io = ImGui::GetIO();
 			inputHandler.SetUICapture(io.WantCaptureMouse, io.WantCaptureKeyboard);
+			mCamera.mWorld.LookAt(spaceship_position);
 
 			glfwPollEvents();
 			inputHandler.Advance();
