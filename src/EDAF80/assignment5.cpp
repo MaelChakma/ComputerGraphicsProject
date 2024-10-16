@@ -182,14 +182,13 @@ void edaf80::Assignment5::run()
 	{
 		switch (current_state)
 		{
-		case NEW_GAME: 
+		case NEW_GAME:
 		{
 			current_state = PLAY_GAME;
-			std::cout << spaceship_inside.get_transform().GetTranslation();
-			std::cout<< (astroid.get_transform().GetTranslation());
 			break;
 		}
-		case PLAY_GAME:{
+		case PLAY_GAME:
+		{
 			glm::vec3 camera_position = mCamera.mWorld.GetTranslation();
 			float min_boundary = -500.0f / 2.0f;
 			float max_boundary = 500.0f / 2.0f;
@@ -231,7 +230,7 @@ void edaf80::Assignment5::run()
 			int N = 1;
 			for (int i = 0; i < N; i++)
 			{
-				if (checkCollision(spaceship_inside.get_transform().GetTranslation(), astroid.get_transform().GetTranslation(), 0.5f + 0.2f, 1.0))
+				if (checkCollision(glm::vec3(spaceship_inside.get_transform().GetMatrix()), astroid.get_transform().GetMatrix(), 0.5f + 0.2f, 1.0))
 				{
 					current_state = END_GAME;
 				}
@@ -259,10 +258,11 @@ void edaf80::Assignment5::run()
 			{
 				skybox.render(mCamera.GetWorldToClipMatrix());
 				glm::mat4 transformastr = glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 5.0f, 5.0f));
-				
-				astroid.render(mCamera.GetWorldToClipMatrix(),transformastr);
 
+				astroid.render(mCamera.GetWorldToClipMatrix(), transformastr);
 
+				std::cout << spaceship_inside.get_transform().GetMatrix();
+				// std::cout << (astroid.get_transform().GetTranslation());
 				glm::mat4 transform = mCamera.mWorld.GetMatrix();
 				transform = glm::translate(transform, glm::vec3(0.0f, -1.0f, -5.0f));
 				spaceship_inside.render(mCamera.GetWorldToClipMatrix(), transform);
@@ -300,11 +300,12 @@ void edaf80::Assignment5::run()
 			mWindowManager.RenderImGuiFrame(show_gui);
 
 			glfwSwapBuffers(window);
-		break;
+			break;
 		}
-		case END_GAME:{
-			//printf("dead");
-			//break;
+		case END_GAME:
+		{
+			// printf("dead");
+			// break;
 		}
 		}
 	}
