@@ -36,13 +36,86 @@ edaf80::Assignment5::~Assignment5()
 }
 
 bool checkCollision(glm::vec3 pos1, glm::vec3 pos2, float rad1, float rad2)
+
 {
-	bool colX = abs(pos1.x - pos2.x) < rad1 + rad2;
-	bool colY = abs(pos1.y - pos2.y) < rad1 + rad2;
-	bool colZ = abs(pos1.z - pos2.z) < rad1 + rad2;
-	return colX && colY && colZ;
+	bool colision = distance(pos1, pos2) < rad1 + rad2;
+	return colision;
 }
 
+struct Frustum
+{
+	glm::vec4 planes[6]; // Each plane is represented by a vec4 (a*x + b*y + c*z + d = 0)
+};
+
+Frustum extractFrustum(const glm::mat4 &projViewMatrix)
+{
+	Frustum frustum;
+
+	// Left
+	frustum.planes[0] = glm::vec4(projViewMatrix[0][3] + projViewMatrix[0][0],
+								  projViewMatrix[1][3] + projViewMatrix[1][0],
+								  projViewMatrix[2][3] + projViewMatrix[2][0],
+								  projViewMatrix[3][3] + projViewMatrix[3][0]);
+
+	// Right
+	frustum.planes[1] = glm::vec4(projViewMatrix[0][3] - projViewMatrix[0][0],
+								  projViewMatrix[1][3] - projViewMatrix[1][0],
+								  projViewMatrix[2][3] - projViewMatrix[2][0],
+								  projViewMatrix[3][3] - projViewMatrix[3][0]);
+
+	// Bottom
+	frustum.planes[2] = glm::vec4(projViewMatrix[0][3] + projViewMatrix[0][1],
+								  projViewMatrix[1][3] + projViewMatrix[1][1],
+								  projViewMatrix[2][3] + projViewMatrix[2][1],
+								  projViewMatrix[3][3] + projViewMatrix[3][1]);
+
+	// Top
+	frustum.planes[3] = glm::vec4(projViewMatrix[0][3] - projViewMatrix[0][1],
+								  projViewMatrix[1][3] - projViewMatrix[1][1],
+								  projViewMatrix[2][3] - projViewMatrix[2][1],
+								  projViewMatrix[3][3] - projViewMatrix[3][1]);
+
+	// Near
+	frustum.planes[4] = glm::vec4(projViewMatrix[0][3] + projViewMatrix[0][2],
+								  projViewMatrix[1][3] + projViewMatrix[1][2],
+								  projViewMatrix[2][3] + projViewMatrix[2][2],
+								  projViewMatrix[3][3] + projViewMatrix[3][2]);
+
+	// Far
+	frustum.planes[5] = glm::vec4(projViewMatrix[0][3] - projViewMatrix[0][2],
+								  projViewMatrix[1][3] - projViewMatrix[1][2],
+								  projViewMatrix[2][3] - projViewMatrix[2][2],
+								  projViewMatrix[3][3] - projViewMatrix[3][2]);
+
+	// Normalize the planes
+	for (int i = 0; i < 6; i++)
+	{
+		float length = glm::length(glm::vec3(frustum.planes[i]));
+		frustum.planes[i] /= length;
+	}
+
+	return frustum;
+}
+bool isAsteroidInView(const Frustum &frustum, const glm::vec3 &asteroidPosition, float asteroidRadius)
+{
+	// Loop over all six planes of the frustum
+	for (int i = 0; i < 6; i++)
+	{
+		glm::vec4 plane = frustum.planes[i];
+
+		// Calculate the distance from the asteroid to the plane
+		float distance = glm::dot(glm::vec3(plane), asteroidPosition) + plane.w;
+
+		// If the asteroid is completely outside of this plane, it's not in the view
+		if (distance < -asteroidRadius)
+		{
+			return false;
+		}
+	}
+
+	// If the asteroid is inside all planes or intersects at least one plane, it's in view
+	return true;
+}
 void edaf80::Assignment5::run()
 {
 	// Set up the camera
@@ -81,9 +154,10 @@ void edaf80::Assignment5::run()
 	auto astroid_ = parametric_shapes::createSphere(1.0f, 100u, 100u);
 	auto spaceship_inside_ = parametric_shapes::createSphere(0.50f, 100u, 100u);
 	auto spaceship_outside_ = parametric_shapes::createTorus(0.50f, 0.20f, 100u, 100u);
+	glm::vec3 camera_offset = glm::vec3(0.0f, -1.50, -20.0);
 
 	bool use_normal_mapping = true;
-	auto light_position = glm::vec3(250.0f, 250.0f, -250.0f);
+	auto light_position = glm::vec3(200.0f, 200.0f, -200.0f);
 
 	// Random number generation setup for asteroid positions
 	std::random_device rd;										// Seed generator
@@ -91,7 +165,7 @@ void edaf80::Assignment5::run()
 	std::uniform_real_distribution<float> dis(-100.0f, 100.0f); // Range for asteroid placement within skybox
 
 	// Create multiple asteroids with random positions
-	const int asteroid_count = 10; // Number of asteroids
+	const int asteroid_count = 100; // Number of asteroids
 	std::vector<Node> asteroids;
 	std::vector<glm::vec3> asteroid_positions;
 	std::vector<glm::vec3> asteroid_velocities; // Store velocities for each asteroid
@@ -202,18 +276,25 @@ void edaf80::Assignment5::run()
 		END_GAME,
 	};
 	State current_state = NEW_GAME;
+	float spaceship_health = 1.0f;
 	while (!glfwWindowShouldClose(window))
 	{
 		switch (current_state)
 		{
 		case NEW_GAME:
 		{
+			for (int i = 0; i < asteroid_count; ++i)
+			{
+				asteroid_positions[i] = glm::vec3(dis(gen), dis(gen), dis(gen));
+				asteroids[i].get_transform().SetTranslate(asteroid_positions[i]);
+			}
+			spaceship_health = 1.0f;
 			current_state = PLAY_GAME;
 			break;
 		}
 		case PLAY_GAME:
 		{
-			glm::vec3 camera_position = mCamera.mWorld.GetTranslation();
+			camera_position = mCamera.mWorld.GetTranslation();
 			float min_boundary = -500.0f / 2.0f;
 			float max_boundary = 500.0f / 2.0f;
 
@@ -223,10 +304,14 @@ void edaf80::Assignment5::run()
 			camera_position.z = glm::clamp(camera_position.z, min_boundary, max_boundary);
 
 			// Set the clamped position back to the camera
-			mCamera.mWorld.SetTranslate(camera_position);
+			// mCamera.mWorld.SetTranslate(camera_position);
 			auto const nowTime = std::chrono::high_resolution_clock::now();
 			auto const deltaTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(nowTime - lastTime);
 			lastTime = nowTime;
+
+			spaceship_inside.get_transform().SetTranslate(camera_position + camera_offset);
+			spaceship_outside.get_transform().SetTranslate(camera_position + camera_offset);
+			glm::vec3 spaceship_position = spaceship_inside.get_transform().GetTranslation();
 
 			auto &io = ImGui::GetIO();
 			inputHandler.SetUICapture(io.WantCaptureMouse, io.WantCaptureKeyboard);
@@ -234,6 +319,8 @@ void edaf80::Assignment5::run()
 			glfwPollEvents();
 			inputHandler.Advance();
 			mCamera.Update(deltaTimeUs, inputHandler);
+			// glm::mat4 projViewMatrix = mCamera.mWorld.mar * mCamera.mWorld.GetMatrix();
+			// Frustum frustum = extractFrustum(projViewMatrix);
 
 			if (inputHandler.GetKeycodeState(GLFW_KEY_R) & JUST_PRESSED)
 			{
@@ -251,10 +338,8 @@ void edaf80::Assignment5::run()
 			if (inputHandler.GetKeycodeState(GLFW_KEY_F11) & JUST_RELEASED)
 				mWindowManager.ToggleFullscreenStatusForWindow(window);
 
-			glm::vec3 spaceship_position = camera_position + glm::vec3(0.0f, -1.0f, -15.0f);
-
-			std::cout << spaceship_position;
-			std::cout << camera_position;
+			// std::cout << spaceship_position;
+			// std::cout << camera_position;
 
 			// Update asteroid velocities and positions towards the spaceship
 			for (int i = 0; i < asteroid_count; ++i)
@@ -262,15 +347,24 @@ void edaf80::Assignment5::run()
 				// Compute direction vector from asteroid to spaceship
 				glm::vec3 direction = glm::normalize(spaceship_position - asteroid_positions[i]);
 
-				// Update velocity for the asteroid
-				asteroid_velocities[i] = direction * asteroid_speed;
+				//if (isAsteroidInView(frustum, asteroid_positions[i], 1.0f))
+				//{
+					// Update velocity for the asteroid
+					asteroid_velocities[i] = direction * asteroid_speed;
 
-				// Update the position of the asteroid based on velocity
-				asteroid_positions[i] += asteroid_velocities[i];
-				asteroids[i].get_transform().SetTranslate(asteroid_positions[i]);
-				if (checkCollision(spaceship_position, asteroid_positions[i], 0.5f + 0.2f, 1.0))
+					// Update the position of the asteroid based on velocity
+					asteroid_positions[i] += asteroid_velocities[i];
+					asteroids[i].get_transform().SetTranslate(asteroid_positions[i]);
+					if (checkCollision(spaceship_position, asteroid_positions[i], 0.5f + 0.2f, 1.0))
+					{
+						spaceship_health -= 0.25f;
+						// std::cout<< (spaceship_position);
+						// std::cout << (camera_position);
+						spaceship_health = glm::clamp(spaceship_health, 0.0f, 1.0f);
+					}
+				//}
+				if (spaceship_health <= 0)
 				{
-					current_state = END_GAME;
 				}
 			}
 
@@ -281,23 +375,23 @@ void edaf80::Assignment5::run()
 			mWindowManager.NewImGuiFrame();
 
 			glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-			bool in_view = true;
+
 			if (!shader_reload_failed)
 			{
 				skybox.render(mCamera.GetWorldToClipMatrix());
 
 				for (int i = 0; i < asteroid_count; i++)
 				{
-					if (in_view)
-					{
+					//if (isAsteroidInView(frustum, asteroid_positions[i], 1.0f))
+					//{
 						asteroids[i].render(mCamera.GetWorldToClipMatrix());
-					}
+					//}
 				}
 
 				glm::mat4 transform = mCamera.mWorld.GetMatrix();
 				transform = glm::translate(transform, glm::vec3(0.0f, -1.00f, -15.0f));
-				spaceship_inside.render(mCamera.GetWorldToClipMatrix(), transform);
-				spaceship_outside.render(mCamera.GetWorldToClipMatrix(), transform);
+				spaceship_inside.render(mCamera.GetWorldToClipMatrix());
+				spaceship_outside.render(mCamera.GetWorldToClipMatrix());
 			}
 
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -306,10 +400,12 @@ void edaf80::Assignment5::run()
 			// Todo: If you want a custom ImGUI window, you can set it up
 			//       here
 			//
-			ImGui::Begin("Scene Controls", nullptr, ImGuiWindowFlags_None);
+			ImGui::Begin("Spaceship Health");
+			ImGui::Text("Health");
+			ImGui::ProgressBar(spaceship_health, ImVec2(0.0f, 0.0f)); // Render a bar with current health
 			ImGui::End();
 			ImGui::Render();
-
+			mWindowManager.RenderImGuiFrame(show_gui);
 			glfwSwapBuffers(window);
 			break;
 		}
@@ -323,13 +419,8 @@ void edaf80::Assignment5::run()
 			{
 
 				// Reset asteroid positions
-				for (int i = 0; i < asteroid_count; ++i)
-				{
-					asteroid_positions[i] = glm::vec3(dis(gen), dis(gen), dis(gen));
-					asteroids[i].get_transform().SetTranslate(asteroid_positions[i]);
-				}
 				// Restart the game
-				current_state = PLAY_GAME;
+				current_state = NEW_GAME;
 			}
 			if (ImGui::Button("Quit Game"))
 			{
