@@ -49,5 +49,5 @@ void main()
     float facing = 1 - max(dot(view_dir,normal_world), 0.0);
     
     FragColor = mix(colordeep,colorshallow, facing)+ (reflection * fresnel) +(refraction_color * (1 - fresnel)) ;
-
+    //FragColor = vec4(view_dir, 1.0);
 }

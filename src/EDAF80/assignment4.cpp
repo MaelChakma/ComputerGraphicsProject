@@ -92,7 +92,6 @@ void edaf80::Assignment4::run()
 		glUniform1f(glGetUniformLocation(program, "wave_amplitude"), wave_amplitude);
 		glUniform1f(glGetUniformLocation(program, "elapsed_time"), elapsed_time_s);
 		glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, glm::value_ptr(camera_position));
-			
 	};
 
 	auto quad_shape = parametric_shapes::createQuad(100.0f, 100.0f, 1000u, 1000u);
@@ -129,7 +128,7 @@ void edaf80::Assignment4::run()
 	quad.set_program(&water_shader, water_uniforms);
 	quad.add_texture("normal_map", normal_map, GL_TEXTURE_2D);
 	quad.add_texture("water_texture", cubemap, GL_TEXTURE_CUBE_MAP);
-
+	// quad.get_transform().SetTranslate(glm::vec3(-20, 0, 0));
 	glClearDepthf(1.0f);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glEnable(GL_DEPTH_TEST);

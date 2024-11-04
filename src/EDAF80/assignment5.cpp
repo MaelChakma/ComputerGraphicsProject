@@ -213,7 +213,7 @@ void edaf80::Assignment5::run()
 		END_GAME,
 	};
 	State current_state = NEW_GAME;
-	float spaceship_health = 1.0f;
+	float spaceship_health = 0.20f;
 	while (!glfwWindowShouldClose(window))
 	{
 		switch (current_state)
@@ -225,7 +225,7 @@ void edaf80::Assignment5::run()
 				asteroid_positions[i] = glm::vec3(dis(gen), dis(gen), dis(gen));
 				asteroids[i].get_transform().SetTranslate(asteroid_positions[i]);
 			}
-			spaceship_health = 1.0f;
+			spaceship_health = 0.20f;
 			current_state = PLAY_GAME;
 			break;
 		}
@@ -365,11 +365,17 @@ void edaf80::Assignment5::run()
 		}
 		case END_GAME:
 		{
-			ImGui::NewFrame();
+			auto &io = ImGui::GetIO();
+			inputHandler.SetUICapture(io.WantCaptureMouse, io.WantCaptureKeyboard);
+			glfwPollEvents();
+			inputHandler.Advance();
+			glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+		    mWindowManager.NewImGuiFrame();
 			ImGui::Begin("Game Over", nullptr, ImGuiWindowFlags_None);
 			ImGui::Text("Game Over! You were hit by an asteroid.");
 			ImGui::Separator();
-			if (ImGui::Button("Restart Game"))
+			
+			if (ImGui::IsItemClicked(ImGui::Button("Restart Game")))
 			{
 				current_state = NEW_GAME;
 			}
@@ -381,7 +387,6 @@ void edaf80::Assignment5::run()
 			ImGui::Render();
 			mWindowManager.RenderImGuiFrame(show_gui);
 			glfwSwapBuffers(window);
-			glfwPollEvents();
 		}
 		}
 	}
