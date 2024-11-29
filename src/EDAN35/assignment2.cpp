@@ -364,7 +364,8 @@ void edan35::Assignment2::run()
 											lightProjectionNearPlane, lightProjectionFarPlane);
 
 	TRSTransformf coneScaleTransform;
-	coneScaleTransform.SetScale(glm::vec3(lightProjectionFarPlane * 0.8f));
+	float coneRadiusScale = 0.1f;
+	coneScaleTransform.SetScale(glm::vec3(lightProjectionFarPlane * coneRadiusScale));
 
 	TRSTransformf lightOffsetTransform;
 	lightOffsetTransform.SetTranslate(glm::vec3(0.0f, 0.0f, -0.4f) * constant::scale_lengths);
@@ -689,7 +690,7 @@ void edan35::Assignment2::run()
 		}
 
 		//
-		// Draw wireframe cones on top of the final image for debugging purposes
+		// Drawframe cones on top of the final image for debugging purposes
 		//
 		glBeginQuery(GL_TIME_ELAPSED, elapsed_time_queries[toU(ElapsedTimeQuery::ConeWireframe)]);
 		if (show_cone_wireframe)
@@ -698,8 +699,9 @@ void edan35::Assignment2::run()
 
 			glDisable(GL_CULL_FACE);
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			for (size_t i = 0; i < lights_nb; ++i)
+			for (size_t i = 0; i < ; ++i)
 			{
+
 				cone.render(view_projection,
 							lightTransforms[i].GetMatrix() * lightOffsetTransform.GetMatrix() * coneScaleTransform.GetMatrix(),
 							render_light_cones_shader, set_uniforms);
@@ -751,6 +753,7 @@ void edan35::Assignment2::run()
 		if (opened)
 		{
 			ImGui::Text("Frame CPU time: %.3f ms", std::chrono::duration<float, std::milli>(deltaTimeUs).count());
+			
 
 			ImGui::Checkbox("Copy elapsed times back to CPU", &copy_elapsed_times);
 
@@ -812,6 +815,7 @@ void edan35::Assignment2::run()
 		if (opened)
 		{
 			ImGui::Checkbox("Pause lights", &are_lights_paused);
+			ImGui::SliderFloat("Cone Radius Scale", &coneRadiusScale, 0.1f, 5.0f);
 			ImGui::SliderInt("Number of lights", &lights_nb, 1, static_cast<int>(constant::lights_nb));
 			ImGui::Checkbox("Show textures", &show_textures);
 			ImGui::Checkbox("Show light cones wireframe", &show_cone_wireframe);
