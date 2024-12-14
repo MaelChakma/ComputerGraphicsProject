@@ -1,5 +1,6 @@
 #include "snowproject.hpp"
 #include "EDAF80/parametric_shapes.hpp"
+#include "ParticleSystem.hpp"
 
 #include "config.hpp"
 #include "core/Bonobo.h"
@@ -15,7 +16,7 @@
 #include <clocale>
 #include <stdexcept>
 
-// Constructor
+// ------------------------------------------------------ Constructor of the project
 edan35::SnowProject::SnowProject(WindowManager& windowManager) : mCamera(0.5f * glm::half_pi<float>(),
 	static_cast<float>(config::resolution_x) / static_cast<float>(config::resolution_y),
 	0.01f, 1000.0f),
@@ -32,34 +33,25 @@ edan35::SnowProject::SnowProject(WindowManager& windowManager) : mCamera(0.5f * 
 	bonobo::init();
 }
 
-// Destructor
+// ------------------------------------------------------ Destructor of the project
 edan35::SnowProject::~SnowProject()
 {
 	bonobo::deinit();
 }
 
-// Function that runs the project
+
+// ------------------------------------------------------ Runs the project
 void edan35::SnowProject::run()
 {
-	// Set up the camera
+	// --------------------- Set up the camera
 	mCamera.mWorld.SetTranslate(glm::vec3(-40.0f, 14.0f, 6.0f));
 	mCamera.mWorld.LookAt(glm::vec3(0.0f));
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
 	mCamera.mMovementSpeed = glm::vec3(5.0f); // 3 m/s => 10.8 km/h
 	auto camera_position = mCamera.mWorld.GetTranslation();
 
-	// Create the shader programs
+	// ---------------------- Create the shader programs
 	ShaderProgramManager program_manager;
-	GLuint fallback_shader = 0u;
-	program_manager.CreateAndRegisterProgram("Fallback",
-		{ {ShaderType::vertex, "common/fallback.vert"},
-		 {ShaderType::fragment, "common/fallback.frag"} },
-		fallback_shader);
-	if (fallback_shader == 0u)
-	{
-		LogError("Failed to load fallback shader");
-		return;
-	}
 
 	GLuint skybox_shader = 0u;
 	program_manager.CreateAndRegisterProgram("Skybox",
@@ -76,6 +68,7 @@ void edan35::SnowProject::run()
 		water_shader);
 	if (water_shader == 0u)
 		LogError("Failed to load water shader");
+
 
 	auto light_position = glm::vec3(-2.0f, 4.0f, 2.0f);
 	auto const set_uniforms = [&light_position](GLuint program)
@@ -130,8 +123,120 @@ void edan35::SnowProject::run()
 	quad.set_geometry(quad_shape);
 	// quad.set_program(&fallback_shader, set_uniforms);
 	quad.set_program(&water_shader, water_uniforms);
+	//quad.set_program(&particle_shader, set_uniforms);
 	quad.add_texture("normal_map", normal_map, GL_TEXTURE_2D);
 	quad.add_texture("water_texture", cubemap, GL_TEXTURE_CUBE_MAP);
+
+
+	// ----------------------------------- Setup particles
+
+	// Creating the particle shader program
+	GLuint particleGPT_shader = 0u;
+	program_manager.CreateAndRegisterProgram("ParticleGPT",
+		{ {ShaderType::vertex, "EDAN35/particleGPT.vert"},
+		  {ShaderType::fragment, "EDAN35/particleGPT.frag"}
+		},
+		particleGPT_shader);
+	if (particleGPT_shader == 0u)
+		LogError("Failed to load particleGPT shader");
+
+	// Setup the feedbacks varyings
+	const char* feedbackVaryings[] = { "positionOut", "velocityOut", "lifetimeOut" };
+	glTransformFeedbackVaryings(particleGPT_shader, 3, feedbackVaryings, GL_INTERLEAVED_ATTRIBS);
+	glLinkProgram(particleGPT_shader);
+
+
+	// Setup of the vertex buffer object to store 1 particle
+	
+	const int MAX_PARTICLES = 1;
+	std::vector<Particle> particles(MAX_PARTICLES);
+
+	// Initialize particles with random data
+	for (int i = 0; i < MAX_PARTICLES; ++i) {
+		particles[i].position[0] = (rand() % 200 - 100) / 100.0f;
+		particles[i].position[1] = (rand() % 200 - 100) / 100.0f;
+		particles[i].position[2] = 0.0f;
+
+		particles[i].velocity[0] = 1.0f;
+		particles[i].velocity[1] = 0.0f;
+		particles[i].velocity[2] = 0.0f;
+
+		particles[i].lifetime = 1.0f;
+
+		particles[i].color = vec4(1.0f);
+	}
+
+	// Create a buffer for particles
+	GLuint particleBuffers[2];
+	glGenBuffers(2, particleBuffers);
+
+	// Creating the transform feedback
+	GLuint transformFeedback[2];
+	glGenTransformFeedbacks(2, transformFeedback);
+
+	// Binding buffers and transform feedbacks
+	for (int i = 0; i < 2; i++) {
+		glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, transformFeedback[i]);
+		glBindBuffer(GL_ARRAY_BUFFER, particleBuffers[i]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Particle) * MAX_PARTICLES, particles.data(), GL_DYNAMIC_DRAW);
+		glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, particleBuffers[i]);
+	}
+
+
+	// Setting a buffer for the geometry of the particle
+
+	float particleGeometryVertices[] = {
+		-0.1f, -0.1f, 0.0f,
+		 0.1f, -0.1f, 0.0f,
+		-0.1f,  0.1f, 0.0f,
+		 0.1f,  0.1f, 0.0f,
+	};
+	GLuint particleGeometryVBO, particleGeometryVAO;
+	
+	glGenVertexArrays(1, &particleGeometryVAO);
+	glBindVertexArray(particleGeometryVAO);
+
+	glGenBuffers(1, &particleGeometryVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, particleGeometryVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(particleGeometryVertices), particleGeometryVertices, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	glBindVertexArray(0);
+		
+
+	// Set up instancing
+
+	glBindVertexArray(particleGeometryVAO);
+	for (int i = 0; i < 2; i++) {
+		glBindBuffer(GL_ARRAY_BUFFER, particleBuffers[i]);
+		// Position (attribute 1)
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)offsetof(Particle, position));
+		glEnableVertexAttribArray(1);
+		glVertexAttribDivisor(1, 1);
+
+		// Velocity (attribute 2)
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)offsetof(Particle, velocity));
+		glEnableVertexAttribArray(2);
+		glVertexAttribDivisor(2, 1);
+
+		// Lifetime (attribute 3)
+		glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)offsetof(Particle, lifetime));
+		glEnableVertexAttribArray(3);
+		glVertexAttribDivisor(3, 1);
+
+		// Color (attribute 4)
+		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)offsetof(Particle, color));
+		glEnableVertexAttribArray(4);
+		glVertexAttribDivisor(4, 1);
+
+	}
+
+	glBindVertexArray(0u);
+
+	glUseProgram(0u);
+
+	// ----------------------------------- End off setup particles
+	
 
 	glClearDepthf(1.0f);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -152,6 +257,7 @@ void edan35::SnowProject::run()
 
 	changeCullMode(cull_mode);
 
+	int iter = 0;
 	while (!glfwWindowShouldClose(window))
 	{
 		auto const nowTime = std::chrono::high_resolution_clock::now();
@@ -215,10 +321,37 @@ void edan35::SnowProject::run()
 			elapsed_time_s += std::chrono::duration<float>(deltaTimeUs).count();
 			skybox.render(mCamera.GetWorldToClipMatrix());
 			quad.render(mCamera.GetWorldToClipMatrix());
+
+			// ---------------------------- Rendering particles
+
+			// Use the shader
+			glUseProgram(particleGPT_shader);
+
+			// Update the uniforms of the vertex shader
+			GLuint deltaTimeLoc = glGetUniformLocation(particleGPT_shader, "deltaTime");
+			glUniform1f(deltaTimeLoc, std::chrono::duration<float>(deltaTimeUs).count());
+
+			glBindVertexArray(particleGeometryVAO);
+
+			int n = iter %2;
+			glBindBuffer(GL_ARRAY_BUFFER, particleBuffers[0]);
+			glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, transformFeedback[1]);
+			iter++;
+
+			glBeginTransformFeedback(GL_TRIANGLES);
+			glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, MAX_PARTICLES); // Render all instances
+			glEndTransformFeedback();
+
+			glBindVertexArray(0u);
+			glUseProgram(0u);
+
 		}
 
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+		
+
+		// Scene controls
 		bool opened = ImGui::Begin("Scene Control", nullptr, ImGuiWindowFlags_None);
 		if (opened)
 		{
@@ -251,6 +384,9 @@ void edan35::SnowProject::run()
 	}
 }
 
+
+
+// ----------------------------------------------------- Main
 int main()
 {
 	std::setlocale(LC_ALL, "");
